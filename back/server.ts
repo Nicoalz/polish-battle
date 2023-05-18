@@ -4,7 +4,7 @@ import { Server } from "socket.io";
 import cors from "cors";
 import { Game } from "./game";
 import { TLastAction, TCard } from "./types/types";
-const PORT = 4000;
+const PORT = process.env.PORT || 4000;
 const app = express();
 app.use(cors());
 
