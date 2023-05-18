@@ -1,6 +1,7 @@
-import { TGame, TPlayer } from "../types/types";
+import { TGame, TPlayer, TLastAction } from "../types/types";
 import { useEffect, useState } from "react";
 import { Socket } from "socket.io-client";
+import Image from "next/image";
 import Actions from "./Actions";
 import SuperPowers from "./SuperPowers";
 export default function Gameboard({
@@ -18,8 +19,8 @@ export default function Gameboard({
   const [isMyTurn, setIsMyTurn] = useState<boolean>(false);
   const [alivePlayers, setAlivePlayers] = useState<TPlayer[]>([]);
   const [deadPlayers, setDeadPlayers] = useState<TPlayer[]>([]);
-  const [actionText, setActionText] = useState<string>("");
   const [winner, setWinner] = useState<TPlayer | null>(null);
+  const [lastAction, setLastAction] = useState<TLastAction | null>(null);
 
   useEffect(() => {
     if (!game.players) return;
@@ -61,13 +62,13 @@ export default function Gameboard({
     socket.emit("draw-card", game.id, myIndex);
   }
 
-  socket.on("action", (action: string) => {
-    setActionText(action);
+  socket.on("action", (action: TLastAction) => {
+    setLastAction(action);
   });
 
   return (
-    <div className=" flex flex-col justify-center items-center container mx-auto py-2">
-      <h1 className="font-bold text-4xl py-2">Gameboard</h1>
+    <div className="w-full flex flex-col justify-center items-center container mx-auto">
+      <h1 className="font-bold text-3xl py-2">Gameboard</h1>
       <div className="flex flex-col  w-full">
         <div className="flex flex-col relative">
           {winner && <div className="absolute w-full h-full bg-black/20"></div>}
@@ -78,7 +79,21 @@ export default function Gameboard({
                 (Next: {game.players[game.nextTurnIndex].name})
               </span>
             </p>
-            <p className="text-xl font-medium h-8">{actionText}</p>
+            <div>
+              <p className="text-xl font-medium h-8">{lastAction?.text}</p>
+              <div className="flex flex-wrap justify-center items-centerw w-full">
+                {lastAction?.cards.map((card, index) => (
+                  <Image
+                    className="mx-1"
+                    key={index}
+                    src={`/cards_img/${card.name}_of_${card.color}.png`}
+                    alt={card.name}
+                    width={60}
+                    height={60}
+                  />
+                ))}
+              </div>
+            </div>
           </div>
           <div className="flex flex-col justify-center items-center  py-2">
             <h2 className="text-xl font-medium">Players</h2>
@@ -86,28 +101,39 @@ export default function Gameboard({
               {game.players?.map((player) => (
                 <li
                   key={player.index}
-                  className={`p-2 shadow-xl flex flex-col justify-between items-center rounded-xl m-2 w-32 h-32 ${
-                    player.life.length > 0 &&
-                    player.life
-                      .map((life) => life.value)
-                      .reduce((a, b) => a + b) === 0
-                      ? "line-through"
-                      : ""
-                  } `}
+                  className={`p-4 bg-white/5 shadow-xl flex flex-col justify-between items-center rounded-xl m-2 relative
+                   ${
+                     player.life.length > 0 &&
+                     player.life
+                       .map((life) => life.value)
+                       .reduce((a, b) => a + b) === 0
+                       ? "line-through"
+                       : ""
+                   } `}
                 >
-                  <p>{player.name}</p>
-                  <p>
-                    🛡️ {player.shield.img} {player.shield.color}{" "}
-                    {player.shield.value === 0 && "0💀"}
-                  </p>
-                  {player.chargedCard && <p>🔋</p>}
-                  {player.hasSuperPower && <p>💥</p>}
+                  {player.chargedCard && (
+                    <p className="absolute left-2 top-2 text-2xl">🔋</p>
+                  )}
+                  {player.hasSuperPower && (
+                    <p className="absolute right-2 top-2 text-2xl">💥</p>
+                  )}
+                  <p className="font-bold text-xl">{player.name}</p>
+                  <Image
+                    src={`/cards_img/${player.shield.name}_of_${player.shield.color}.png`}
+                    alt={player.drawnCard?.name || "card"}
+                    className="my-4"
+                    width={100}
+                    height={100}
+                  />
                   <div className="flex flex-wrap">
                     {player.life.map((life, index) => (
-                      <p key={index}>
-                        {" "}
-                        {life.img} {life.color} {life.value === 0 && "0💀"}
-                      </p>
+                      <Image
+                        key={index}
+                        src={`/cards_img/${life.name}_of_${life.color}.png`}
+                        alt={life.name}
+                        width={100}
+                        height={100}
+                      />
                     ))}
                   </div>
                 </li>

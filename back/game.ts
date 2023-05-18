@@ -100,34 +100,35 @@ export class Game {
     this.changeTurnToNextPlayer();
   }
 
-  public superAttack(playerIndex: number, targetIndex: number): number {
-    // its an attack with new Card, if new Card Value is < 8 then its deals 8 dmg
+  public superAttack(playerIndex: number, targetIndex: number): Card {
+
     const player = this.players[playerIndex];
     const target = this.players[targetIndex];
-    if (!player.hasSuperPower) return 0;
-    if (player.drawnCard) return 0;
-    let superPwrDmg = 0;
-    const newCard = new Card();
-    if (newCard.value < 8) {
-      superPwrDmg = 8;
-    } else {
-      superPwrDmg = newCard.value;
-    }
+    const nullCard = new Card();
+    nullCard.setValue(0);
+    if (!player.hasSuperPower) return nullCard;
+    if (player.drawnCard) return nullCard;
+    const superPwrCard = new Card();
+    if (superPwrCard.value < 8) {
+      superPwrCard.setValue(8);
+    } 
     const chargedDmg = player.chargedCard?.value || 0;
-    let dmg = superPwrDmg + chargedDmg - target.shield.value;
+    let dmg = superPwrCard.value + chargedDmg - target.shield.value;
     dmg = this.applyDamageToLife(dmg, target);
     target.resetChargedCard();
     player.hasSuperPower = false;
     this.updateWinner();
     this.changeTurnToNextPlayer();
-    return superPwrDmg;
+    return superPwrCard;
   }
 
-  public superShield(playerIndex: number, targetIndex: number): number {
+  public superShield(playerIndex: number, targetIndex: number): Card {
     const player = this.players[playerIndex];
     const target = this.players[targetIndex];
-    if (!player.hasSuperPower) return 0;
-    if (player.drawnCard) return 0;
+    const nullCard = new Card();
+    nullCard.setValue(0);
+    if (!player.hasSuperPower) return nullCard;
+    if (player.drawnCard) return nullCard;
     let superPwrShield = 0;
     const newCard = new Card();
     if (newCard.value < 8) {
@@ -139,7 +140,7 @@ export class Game {
     target.shield.setValue(superPwrShield);
     player.hasSuperPower = false;
     this.changeTurnToNextPlayer();
-    return superPwrShield;
+    return target.shield;
   }
 
   public updateWinner() {
@@ -183,24 +184,24 @@ export class Player {
 }
 
 export class Card {
-  public img: string;
+  public name: string;
   public value: number;
   public color: string;
-  public possibleColors: string[] = ["❤️", "♦️", "♠️", "♣️"];
-  public possibleValues: { value: number; img: string }[] = [
-    { value: 1, img: "1" },
-    { value: 2, img: "2" },
-    { value: 3, img: "3" },
-    { value: 4, img: "4" },
-    { value: 5, img: "5" },
-    { value: 6, img: "6" },
-    { value: 7, img: "7" },
-    { value: 8, img: "8" },
-    { value: 9, img: "9" },
-    { value: 10, img: "10" },
-    { value: 11, img: "💂‍♀️" },
-    { value: 12, img: "👸" },
-    { value: 13, img: "🤴" },
+  public possibleColors: string[] = ["hearts", "spades", "diamonds", "clubs"];
+  public possibleValues: { value: number; name: string }[] = [
+    { value: 1, name: "ace" },
+    { value: 2, name: "2" },
+    { value: 3, name: "3" },
+    { value: 4, name: "4" },
+    { value: 5, name: "5" },
+    { value: 6, name: "6" },
+    { value: 7, name: "7" },
+    { value: 8, name: "8" },
+    { value: 9, name: "9" },
+    { value: 10, name: "10" },
+    { value: 11, name: "jack" },
+    { value: 12, name: "queen" },
+    { value: 13, name: "king" },
   ];
 
   constructor() {
@@ -209,10 +210,10 @@ export class Card {
         Math.floor(Math.random() * this.possibleColors.length)
       ];
     const randomIndex = Math.floor(Math.random() * this.possibleValues.length);
-    this.img = this.possibleValues[randomIndex].img;
+    this.name = this.possibleValues[randomIndex].name;
     if (
-      (this.img === "🤴" && this.color === "❤️") ||
-      (this.img === "🤴" && this.color === "♦️")
+      (this.name === "king" && this.color === "hearts") ||
+      (this.name === "king" && this.color === "hearts")
     ) {
       this.value = 0;
     } else {
@@ -222,7 +223,7 @@ export class Card {
 
   setValue(value: number) {
     this.value = value;
-    this.img =
-      this.possibleValues.find((val) => val.value === value)?.img || "";
+    this.name =
+      this.possibleValues.find((val) => val.value === value)?.name || "";
   }
 }

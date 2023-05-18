@@ -37,7 +37,7 @@ const Game = () => {
     }
   }, [game, username]);
 
-  function joinRoom() {
+  function ready() {
     if (!roomId || !username) {
       return;
     }
@@ -57,52 +57,57 @@ const Game = () => {
   });
 
   return (
-    <div>
+    <div className="container m-auto flex flex-col items-center justify-center my-8">
       <h1>Room ID: {roomId}</h1>
       {!isJoined && (
-        <div className="flex flex-col">
-          <label htmlFor="username">Username</label>
-          <input
-            id="username"
-            type="text"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-          />
-          <button
-            className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
-            onClick={joinRoom}
-          >
-            Join
-          </button>
+        <div className="flex justify-center m-8 items-center w-full">
+          <div className="flex flex-col m-8 items-center justify-center">
+            <input
+              id="username"
+              type="text"
+              placeholder="Username..."
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              className="border border-gray-400 p-2 rounded my-2 w-full text-black"
+            />
+            <button
+              className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded w-full"
+              onClick={ready}
+            >
+              Ready
+            </button>
+          </div>
         </div>
       )}
       {isJoined && game && (
         <div>
-          <div>
-            <h1>Players</h1>
-            <ul>
+          <div className="flex items-center justify-center">
+            <h1>Players:</h1>
+            <ul className="flex flex-wrap">
               {game.players?.map((player) => (
-                <li key={player.index}>
+                <li key={player.index} className="m-2">
                   {player.name} {player.isChef && <span>👑</span>}
                 </li>
               ))}
             </ul>
           </div>
-          {!game.isStarted &&
-            (isChef ? (
-              <div>
-                <button
-                  className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
-                  onClick={startGame}
-                >
-                  Start Game
-                </button>
-              </div>
-            ) : (
-              <div>
-                <h1>Waiting for {chefName} to start the game</h1>
-              </div>
-            ))}
+          <div className="flex items-center justify-center">
+            {!game.isStarted &&
+              (isChef ? (
+                <div>
+                  <button
+                    className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
+                    onClick={startGame}
+                  >
+                    Start Game
+                  </button>
+                </div>
+              ) : (
+                <div>
+                  <h1>Waiting for {chefName} to start the game</h1>
+                </div>
+              ))}
+          </div>
           {game.isStarted && (
             <div>
               <Gameboard

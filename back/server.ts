@@ -3,6 +3,7 @@ import http from "http";
 import { Server } from "socket.io";
 import cors from "cors";
 import { Game } from "./game";
+import { TLastAction, TCard } from "./types/types";
 const PORT = 4000;
 const app = express();
 app.use(cors());
@@ -45,9 +46,11 @@ io.on("connection", (socket) => {
   });
 
   socket.on("draw-card", (roomId: string, playerIndex: number) => {
-    console.log("draw-card", roomId, playerIndex);
-    const actionTxt = `${games[roomId].players[playerIndex].name} draws a card`;
-    io.to(roomId).emit("action", actionTxt);
+    const lastAction: TLastAction = {
+      text: `${games[roomId].players[playerIndex].name} draws a card`,
+      cards: [],
+    };
+    io.to(roomId).emit("action", lastAction);
     sleep(3000);
     games[roomId].drawCard(playerIndex);
     io.to(roomId).emit("game-state", games[roomId]);
@@ -56,14 +59,22 @@ io.on("connection", (socket) => {
   socket.on(
     "attack",
     (roomId: string, playerIndex: number, targetIndex: number) => {
-      let actionTxt = `${games[roomId].players[playerIndex].name} attacks ${games[roomId].players[targetIndex].name} with ${games[roomId].players[playerIndex].drawnCard?.value}`;
+      let actionTxt = `${games[roomId].players[playerIndex].name} attacks ${games[roomId].players[targetIndex].name} by ${games[roomId].players[playerIndex].drawnCard?.value}`;
       if (games[roomId].players[playerIndex].chargedCard) {
-        actionTxt += `+ ${games[roomId].players[playerIndex].chargedCard?.value} charged card`;
+        actionTxt += `+ ${games[roomId].players[playerIndex].chargedCard?.value} 🔋`;
       }
       if (games[roomId].players[targetIndex].chargedCard) {
-        actionTxt += ` attacked player loses his charged card attack`;
+        actionTxt += `.${games[roomId].players[targetIndex].name} loses his 🔋`;
       }
-      io.to(roomId).emit("action", actionTxt);
+      const cardDrawn = games[roomId].players[playerIndex].drawnCard;
+      const cardCharged = games[roomId].players[playerIndex].chargedCard;
+      const cards = [cardDrawn, cardCharged].filter((c) => c) as TCard[];
+      const lastAction: TLastAction = {
+        text: actionTxt,
+        cards,
+      };
+
+      io.to(roomId).emit("action", lastAction);
       sleep(3000);
       games[roomId].attack(playerIndex, targetIndex);
       io.to(roomId).emit("game-state", games[roomId]);
@@ -74,8 +85,17 @@ io.on("connection", (socket) => {
     "change-shield",
     (roomId: string, playerIndex: number, targetIndex: number) => {
       games[roomId].changeShield(playerIndex, targetIndex);
-      const actionTxt = `${games[roomId].players[playerIndex].name} changes shield of ${games[roomId].players[targetIndex].name} with ${games[roomId].players[playerIndex].shield.value}`;
-      io.to(roomId).emit("action", actionTxt);
+      let actionTxt = `${games[roomId].players[playerIndex].name} changes `;
+      if (playerIndex === targetIndex) {
+        actionTxt += `his shield with ${games[roomId].players[playerIndex].shield.value}`;
+      } else {
+        actionTxt += `${games[roomId].players[targetIndex].name}'s shield by ${games[roomId].players[playerIndex].shield.value}`;
+      }
+      const lastAction: TLastAction = {
+        text: actionTxt,
+        cards: [games[roomId].players[targetIndex].shield],
+      };
+      io.to(roomId).emit("action", lastAction);
       sleep(3000);
       io.to(roomId).emit("game-state", games[roomId]);
     }
@@ -85,8 +105,17 @@ io.on("connection", (socket) => {
     "charge-attack",
     (roomId: string, playerIndex: number, targetIndex: number) => {
       games[roomId].chargeCard(playerIndex, targetIndex);
-      const actionTxt = `${games[roomId].players[playerIndex].name} charges attack of ${games[roomId].players[targetIndex].name} with`;
-      io.to(roomId).emit("action", actionTxt);
+      let actionTxt = `${games[roomId].players[playerIndex].name} charges `;
+      if (playerIndex === targetIndex) {
+        actionTxt += `his 🔋`;
+      } else {
+        actionTxt += `${games[roomId].players[targetIndex].name} 🔋`;
+      }
+      const lastAction: TLastAction = {
+        text: actionTxt,
+        cards: [],
+      };
+      io.to(roomId).emit("action", lastAction);
       sleep(3000);
       io.to(roomId).emit("game-state", games[roomId]);
     }
@@ -97,7 +126,11 @@ io.on("connection", (socket) => {
     (roomId: string, playerIndex: number, targetIndex: number) => {
       games[roomId].resurrect(playerIndex, targetIndex);
       const actionTxt = `${games[roomId].players[playerIndex].name} resurrects ${games[roomId].players[targetIndex].name}`;
-      io.to(roomId).emit("action", actionTxt);
+      const lastAction: TLastAction = {
+        text: actionTxt,
+        cards: [],
+      };
+      io.to(roomId).emit("action", lastAction);
       sleep(3000);
       io.to(roomId).emit("game-state", games[roomId]);
     }
@@ -106,16 +139,28 @@ io.on("connection", (socket) => {
   socket.on(
     "super-attack",
     (roomId: string, playerIndex: number, targetIndex: number) => {
-      const superDmg = games[roomId].superAttack(playerIndex, targetIndex);
-      const actionTxt = `${
+      const superAttackCard = games[roomId].superAttack(
+        playerIndex,
+        targetIndex
+      );
+      let actionTxt = `${
         games[roomId].players[playerIndex].name
-      } super attacks ${
-        games[roomId].players[targetIndex].name
-      } with ${superDmg} ${
-        games[roomId].players[playerIndex].chargedCard &&
-        `+ ${games[roomId].players[playerIndex].chargedCard?.value} charged card`
+      } super attacks ${games[roomId].players[targetIndex].name} by ${
+        superAttackCard.value
       }`;
-      io.to(roomId).emit("action", actionTxt);
+      if (games[roomId].players[playerIndex].chargedCard) {
+        actionTxt += `+ ${games[roomId].players[playerIndex].chargedCard?.value} 🔋`;
+      }
+      if (games[roomId].players[targetIndex].chargedCard) {
+        actionTxt += `.${games[roomId].players[targetIndex].name} loses his 🔋`;
+      }
+      const chargedCard = games[roomId].players[playerIndex].chargedCard;
+      const cards = [superAttackCard, chargedCard].filter((c) => c) as TCard[];
+      const lastAction: TLastAction = {
+        text: actionTxt,
+        cards,
+      };
+      io.to(roomId).emit("action", lastAction);
       sleep(3000);
       io.to(roomId).emit("game-state", games[roomId]);
     }
@@ -124,12 +169,18 @@ io.on("connection", (socket) => {
   socket.on(
     "super-shield",
     (roomId: string, playerIndex: number, targetIndex: number) => {
-      const newShieldValue = games[roomId].superShield(
-        playerIndex,
-        targetIndex
-      );
-      const actionTxt = `${games[roomId].players[playerIndex].name} super shields ${games[roomId].players[targetIndex].name} with ${newShieldValue}`;
-      io.to(roomId).emit("action", actionTxt);
+      const newShieldCard = games[roomId].superShield(playerIndex, targetIndex);
+      let actionTxt = `${games[roomId].players[playerIndex].name} super shields`;
+      if (playerIndex === targetIndex) {
+        actionTxt += ` himself by ${newShieldCard.value}`;
+      } else {
+        actionTxt += ` ${games[roomId].players[targetIndex].name} by ${newShieldCard.value}`;
+      }
+      const lastAction: TLastAction = {
+        text: actionTxt,
+        cards: [newShieldCard],
+      };
+      io.to(roomId).emit("action", lastAction);
       sleep(3000);
       io.to(roomId).emit("game-state", games[roomId]);
     }
