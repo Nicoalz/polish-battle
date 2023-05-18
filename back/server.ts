@@ -4,6 +4,8 @@ import { Server } from "socket.io";
 import cors from "cors";
 import { Game } from "./game";
 import { TLastAction, TCard } from "./types/types";
+import dotenv from "dotenv";
+dotenv.config();
 const PORT = process.env.PORT || 4000;
 const app = express();
 app.use(cors());
