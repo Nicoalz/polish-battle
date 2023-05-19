@@ -115,6 +115,7 @@ const Game = () => {
                 username={username}
                 socket={socket}
                 myIndex={myIndex}
+                isChef={isChef}
               />
             </div>
           )}

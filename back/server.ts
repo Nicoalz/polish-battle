@@ -17,7 +17,7 @@ async function sleep(ms: number) {
 const server = http.createServer(app);
 const io = new Server(server, {
   cors: {
-    origin: "*", //"https://polishbattle.nicoalz.xyz",
+    origin: "https://polishbattle.nicoalz.xyz",
   },
 });
 

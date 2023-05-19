@@ -9,11 +9,13 @@ export default function Gameboard({
   username,
   socket,
   myIndex,
+  isChef,
 }: {
   game: TGame;
   username: string;
   socket: Socket;
   myIndex: number;
+  isChef: boolean;
 }) {
   const [playerToPlay, setPlayerToPlay] = useState<TPlayer>();
   const [isMyTurn, setIsMyTurn] = useState<boolean>(false);
@@ -55,18 +57,22 @@ export default function Gameboard({
   return (
     <div className="flex flex-col justify-center items-center container mx-auto relative w-full">
       <h1 className="font-bold text-3xl py-2">Gameboard</h1>
-      <button
-        onClick={restartGame}
-        className="text-xs left-0 top-0 m-2 bg-orange-500 hover:bg-orange-700 text-white font-normal py-2 px-4 rounded absolute"
-      >
-        🔁 Restart
-      </button>
+      {isChef && (
+        <button
+          onClick={restartGame}
+          className="text-xs left-0 top-0 m-2 bg-orange-500 hover:bg-orange-700 text-white font-normal py-2 px-4 rounded absolute"
+        >
+          🔁 Restart
+        </button>
+      )}
       <div className="flex flex-col  w-full">
         <div className="flex flex-col relative">
           {game.winner && (
             <div className="absolute flex justify-center items-center w-full h-full bg-black/80 z-10">
               <div>
-                <h1 className="bg-[#202124] font-bold text-3xl rounded py-2 px-4 flex justify-center items-center">{game.winner.name} has won the game!</h1>
+                <h1 className="bg-[#202124] font-bold text-3xl rounded py-2 px-4 flex justify-center items-center">
+                  {game.winner.name} has won the game!
+                </h1>
               </div>
             </div>
           )}
