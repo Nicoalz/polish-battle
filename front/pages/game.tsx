@@ -80,7 +80,7 @@ const Game = () => {
         </div>
       )}
       {isJoined && game && (
-        <div>
+        <div className="w-full">
           <div className="flex items-center justify-center">
             <h1>Players:</h1>
             <ul className="flex flex-wrap">
@@ -109,7 +109,7 @@ const Game = () => {
               ))}
           </div>
           {game.isStarted && (
-            <div>
+            <div className="w-full">
               <Gameboard
                 game={game}
                 username={username}

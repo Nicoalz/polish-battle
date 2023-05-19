@@ -28,8 +28,16 @@ export class Game {
   }
 
   public changeTurnToNextPlayer() {
-    this.turnIndex = (this.turnIndex + 1) % this.players.length;
-    this.nextTurnIndex = (this.turnIndex + 1) % this.players.length;
+    this.turnIndex = this.getNextAlivePlayerIndex(this.turnIndex);
+    this.nextTurnIndex = this.getNextAlivePlayerIndex(this.turnIndex);
+  }
+
+  private getNextAlivePlayerIndex(currentIndex: number): number {
+    let nextIndex = (currentIndex + 1) % this.players.length;
+    while (!this.players[nextIndex].isAlive()) {
+      nextIndex = (nextIndex + 1) % this.players.length;
+    }
+    return nextIndex;
   }
 
   public showActualCard(player: Player): number {
@@ -41,8 +49,24 @@ export class Game {
     this.isStarted = true;
   }
 
+  public restartGame() {
+    const players = this.players;
+    this.players = [];
+    this.alivePlayers = [];
+    this.deadPlayers = [];
+    this.turnIndex = 0;
+    this.nextTurnIndex = 1;
+    this.isStarted = false;
+    this.winner = undefined;
+    players.forEach((player) => {
+      this.addPlayer(player.name);
+    });
+    this.startGame();
+  }
+
   private applyDamageToLife(dmg: number, target: Player) {
     while (dmg > 0 && target.life.length > 0) {
+      target.resetChargedCard();
       if (dmg >= target.life[0].value) {
         dmg -= target.life[0].value;
         target.life[0].setValue(0);
@@ -64,9 +88,9 @@ export class Game {
 
     dmg = this.applyDamageToLife(dmg, target);
 
-    target.resetChargedCard();
+    player.resetChargedCard();
     player.resetDrawnCard();
-    this.updateWinner();
+    this.updatePlayersStatus();
     this.changeTurnToNextPlayer();
   }
 
@@ -94,14 +118,16 @@ export class Game {
     const target = this.players[targetIndex];
     if (!player.hasSuperPower) return;
     if (player.drawnCard) return;
-    if (target.life.length > 0) return;
+    if (target.isAlive()) return;
+    target.shield = new Card();
     target.life.push(new Card());
     player.hasSuperPower = false;
+    target.hasSuperPower = false;
+    this.updatePlayersStatus();
     this.changeTurnToNextPlayer();
   }
 
   public superAttack(playerIndex: number, targetIndex: number): Card {
-
     const player = this.players[playerIndex];
     const target = this.players[targetIndex];
     const nullCard = new Card();
@@ -111,13 +137,13 @@ export class Game {
     const superPwrCard = new Card();
     if (superPwrCard.value < 8) {
       superPwrCard.setValue(8);
-    } 
+    }
     const chargedDmg = player.chargedCard?.value || 0;
     let dmg = superPwrCard.value + chargedDmg - target.shield.value;
     dmg = this.applyDamageToLife(dmg, target);
     target.resetChargedCard();
     player.hasSuperPower = false;
-    this.updateWinner();
+    this.updatePlayersStatus();
     this.changeTurnToNextPlayer();
     return superPwrCard;
   }
@@ -143,8 +169,11 @@ export class Game {
     return target.shield;
   }
 
-  public updateWinner() {
+  public updatePlayersStatus() {
     const alivePlayers = this.players.filter((p) => p.isAlive());
+    const deadPlayers = this.players.filter((p) => !p.isAlive());
+    this.alivePlayers = alivePlayers;
+    this.deadPlayers = deadPlayers;
     if (alivePlayers.length === 1) {
       this.winner = alivePlayers[0];
     }

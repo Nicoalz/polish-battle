@@ -7,6 +7,9 @@ export type TPlayer = {
   shield: TCard;
   chargedCard?: TCard;
   hasSuperPower: boolean;
+  resetDrawnCard: () => void;
+  resetChargedCard: () => void;
+  isAlive: () => boolean;
 };
 
 export type TCard = {
@@ -15,6 +18,7 @@ export type TCard = {
   color: string;
   possibleColors: string[];
   possibleValues: { value: number; name: string }[];
+  setValue(value: number): void;
 };
 
 export type TGame = {

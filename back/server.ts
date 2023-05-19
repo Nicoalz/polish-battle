@@ -17,7 +17,7 @@ async function sleep(ms: number) {
 const server = http.createServer(app);
 const io = new Server(server, {
   cors: {
-    origin: "*",
+    origin: "*", //"https://polishbattle.nicoalz.xyz",
   },
 });
 
@@ -47,37 +47,45 @@ io.on("connection", (socket) => {
     io.to(roomId).emit("game-state", games[roomId]);
   });
 
-  socket.on("draw-card", (roomId: string, playerIndex: number) => {
+  socket.on("draw-card", async (roomId: string, playerIndex: number) => {
     const lastAction: TLastAction = {
       text: `${games[roomId].players[playerIndex].name} draws a card`,
       cards: [],
     };
     io.to(roomId).emit("action", lastAction);
-    sleep(3000);
     games[roomId].drawCard(playerIndex);
     io.to(roomId).emit("game-state", games[roomId]);
   });
 
   socket.on(
     "attack",
-    (roomId: string, playerIndex: number, targetIndex: number) => {
-      let actionTxt = `${games[roomId].players[playerIndex].name} attacks ${games[roomId].players[targetIndex].name} by ${games[roomId].players[playerIndex].drawnCard?.value}`;
-      if (games[roomId].players[playerIndex].chargedCard) {
-        actionTxt += `+ ${games[roomId].players[playerIndex].chargedCard?.value} 🔋`;
+    async (roomId: string, playerIndex: number, targetIndex: number) => {
+      const player = games[roomId].players[playerIndex];
+      const target = games[roomId].players[targetIndex];
+      let dmg = 0;
+      const targetChargedCard = target.chargedCard;
+      const playerChargedCard = player.chargedCard;
+      const cardDrawn = player.drawnCard;
+      let actionTxt = `${player.name} attacks ${target.name} by ${cardDrawn?.value}`;
+      if (cardDrawn) {
+        dmg += cardDrawn.value;
       }
-      if (games[roomId].players[targetIndex].chargedCard) {
+      if (playerChargedCard) {
+        actionTxt += `+ ${playerChargedCard.value} 🔋`;
+        dmg += playerChargedCard.value;
+      }
+      if (targetChargedCard && dmg > target.shield.value) {
         actionTxt += `.${games[roomId].players[targetIndex].name} loses his 🔋`;
       }
-      const cardDrawn = games[roomId].players[playerIndex].drawnCard;
-      const cardCharged = games[roomId].players[playerIndex].chargedCard;
-      const cards = [cardDrawn, cardCharged].filter((c) => c) as TCard[];
+
+      const cards = [cardDrawn, playerChargedCard].filter((c) => c) as TCard[];
       const lastAction: TLastAction = {
         text: actionTxt,
         cards,
       };
 
       io.to(roomId).emit("action", lastAction);
-      sleep(3000);
+      await sleep(1000);
       games[roomId].attack(playerIndex, targetIndex);
       io.to(roomId).emit("game-state", games[roomId]);
     }
@@ -85,27 +93,27 @@ io.on("connection", (socket) => {
 
   socket.on(
     "change-shield",
-    (roomId: string, playerIndex: number, targetIndex: number) => {
+    async (roomId: string, playerIndex: number, targetIndex: number) => {
       games[roomId].changeShield(playerIndex, targetIndex);
       let actionTxt = `${games[roomId].players[playerIndex].name} changes `;
       if (playerIndex === targetIndex) {
         actionTxt += `his shield with ${games[roomId].players[playerIndex].shield.value}`;
       } else {
-        actionTxt += `${games[roomId].players[targetIndex].name}'s shield by ${games[roomId].players[playerIndex].shield.value}`;
+        actionTxt += `${games[roomId].players[targetIndex].name}'s shield by ${games[roomId].players[targetIndex].shield.value}`;
       }
       const lastAction: TLastAction = {
         text: actionTxt,
         cards: [games[roomId].players[targetIndex].shield],
       };
       io.to(roomId).emit("action", lastAction);
-      sleep(3000);
+      await sleep(1000);
       io.to(roomId).emit("game-state", games[roomId]);
     }
   );
 
   socket.on(
     "charge-attack",
-    (roomId: string, playerIndex: number, targetIndex: number) => {
+    async (roomId: string, playerIndex: number, targetIndex: number) => {
       games[roomId].chargeCard(playerIndex, targetIndex);
       let actionTxt = `${games[roomId].players[playerIndex].name} charges `;
       if (playerIndex === targetIndex) {
@@ -118,14 +126,14 @@ io.on("connection", (socket) => {
         cards: [],
       };
       io.to(roomId).emit("action", lastAction);
-      sleep(3000);
+      await sleep(1000);
       io.to(roomId).emit("game-state", games[roomId]);
     }
   );
 
   socket.on(
     "resurrect",
-    (roomId: string, playerIndex: number, targetIndex: number) => {
+    async (roomId: string, playerIndex: number, targetIndex: number) => {
       games[roomId].resurrect(playerIndex, targetIndex);
       const actionTxt = `${games[roomId].players[playerIndex].name} resurrects ${games[roomId].players[targetIndex].name}`;
       const lastAction: TLastAction = {
@@ -133,23 +141,19 @@ io.on("connection", (socket) => {
         cards: [],
       };
       io.to(roomId).emit("action", lastAction);
-      sleep(3000);
+      await sleep(1000);
       io.to(roomId).emit("game-state", games[roomId]);
     }
   );
 
   socket.on(
     "super-attack",
-    (roomId: string, playerIndex: number, targetIndex: number) => {
+    async (roomId: string, playerIndex: number, targetIndex: number) => {
       const superAttackCard = games[roomId].superAttack(
         playerIndex,
         targetIndex
       );
-      let actionTxt = `${
-        games[roomId].players[playerIndex].name
-      } super attacks ${games[roomId].players[targetIndex].name} by ${
-        superAttackCard.value
-      }`;
+      let actionTxt = `${games[roomId].players[playerIndex].name} super attacks ${games[roomId].players[targetIndex].name} by ${superAttackCard.value}`;
       if (games[roomId].players[playerIndex].chargedCard) {
         actionTxt += `+ ${games[roomId].players[playerIndex].chargedCard?.value} 🔋`;
       }
@@ -163,14 +167,14 @@ io.on("connection", (socket) => {
         cards,
       };
       io.to(roomId).emit("action", lastAction);
-      sleep(3000);
+      await sleep(1000);
       io.to(roomId).emit("game-state", games[roomId]);
     }
   );
 
   socket.on(
     "super-shield",
-    (roomId: string, playerIndex: number, targetIndex: number) => {
+    async (roomId: string, playerIndex: number, targetIndex: number) => {
       const newShieldCard = games[roomId].superShield(playerIndex, targetIndex);
       let actionTxt = `${games[roomId].players[playerIndex].name} super shields`;
       if (playerIndex === targetIndex) {
@@ -183,8 +187,13 @@ io.on("connection", (socket) => {
         cards: [newShieldCard],
       };
       io.to(roomId).emit("action", lastAction);
-      sleep(3000);
+      await sleep(1000);
       io.to(roomId).emit("game-state", games[roomId]);
     }
   );
+
+  socket.on("restart-game", (roomId: string) => {
+    games[roomId].restartGame();
+    io.to(roomId).emit("game-state", games[roomId]);
+  });
 });

@@ -5,19 +5,20 @@ export default function Actions({
   game,
   socket,
   myIndex,
-  alivePlayers,
   playerToPlay,
+  setIsMyTurn,
 }: {
   game: TGame;
   socket: Socket;
   myIndex: number;
-  alivePlayers: TPlayer[];
   playerToPlay: TPlayer;
+  setIsMyTurn: React.Dispatch<React.SetStateAction<boolean>>;
 }) {
   const [actionChosen, setActionChosen] = useState<string>("");
   const [targetIndex, setTargetIndex] = useState<number>(-1);
-
   function confirmAction() {
+    if (targetIndex === -1) return;
+    setIsMyTurn(false);
     if (actionChosen === "attack") {
       attackPlayer();
     }
@@ -25,10 +26,6 @@ export default function Actions({
       changeShield();
     }
     if (actionChosen === "charge-attack") {
-      const targetPlayer = alivePlayers.find(
-        (player) => player.index === targetIndex
-      );
-      if (targetPlayer?.chargedCard) return;
       chargeAttack();
     }
     setActionChosen("");
@@ -36,17 +33,18 @@ export default function Actions({
   }
 
   function attackPlayer() {
-    if (targetIndex === -1) return;
     socket.emit("attack", game.id, myIndex, targetIndex);
   }
 
   function changeShield() {
-    if (targetIndex === -1) return;
     socket.emit("change-shield", game.id, myIndex, targetIndex);
   }
 
   function chargeAttack() {
-    if (targetIndex === -1) return;
+    const targetPlayer = game.alivePlayers.find(
+      (player) => player.index === targetIndex
+    );
+    if (targetPlayer?.chargedCard) return;
     socket.emit("charge-attack", game.id, myIndex, targetIndex);
   }
 
@@ -88,10 +86,10 @@ export default function Actions({
             onClick={() => setActionChosen("")}
             className="absolute left-0 bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded"
           >
-            ⬅️ Change action
+            ⬅️
           </button>
           <div className="flex flex-wrap">
-            {alivePlayers.map((player) => (
+            {game.alivePlayers.map((player) => (
               <div key={player.index}>
                 <button
                   className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded m-2"
@@ -112,11 +110,11 @@ export default function Actions({
             onClick={() => setTargetIndex(-1)}
             className="absolute left-0 bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded"
           >
-            ⬅️ Change target
+            ⬅️
           </button>
           <p>
             You have chosen to {actionChosen} on:
-            {alivePlayers[targetIndex].name}
+            {game.players[targetIndex].name}
           </p>
           <button
             className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded"

@@ -10,7 +10,7 @@ export default function Home() {
   }
 
   function createRoom() {
-    const rdmId = Math.random().toString(36).substring(7);
+    const rdmId = Math.random().toString(36).substr(2, 16);
     setRoomId(rdmId);
     window.location.href = `/game?${rdmId}`;
   }

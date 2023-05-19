@@ -17,31 +17,13 @@ export default function Gameboard({
 }) {
   const [playerToPlay, setPlayerToPlay] = useState<TPlayer>();
   const [isMyTurn, setIsMyTurn] = useState<boolean>(false);
-  const [alivePlayers, setAlivePlayers] = useState<TPlayer[]>([]);
-  const [deadPlayers, setDeadPlayers] = useState<TPlayer[]>([]);
-  const [winner, setWinner] = useState<TPlayer | null>(null);
   const [lastAction, setLastAction] = useState<TLastAction | null>(null);
 
   useEffect(() => {
     if (!game.players) return;
-    updateWinner();
-    updatePlayersStatus();
     updateIsMyTurn();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [game]);
-
-  function updatePlayersStatus() {
-    const alivePlayers = game.alivePlayers;
-    const deadPlayers = game.deadPlayers;
-    setAlivePlayers(alivePlayers);
-    setDeadPlayers(deadPlayers);
-  }
-
-  function updateWinner() {
-    if (game.winner) {
-      setWinner(game.winner);
-    }
-  }
 
   function updateIsMyTurn() {
     const playerToPlay = game.players.find(
@@ -66,12 +48,28 @@ export default function Gameboard({
     setLastAction(action);
   });
 
+  function restartGame() {
+    socket.emit("restart-game", game.id);
+  }
+
   return (
-    <div className="w-full flex flex-col justify-center items-center container mx-auto">
+    <div className="flex flex-col justify-center items-center container mx-auto relative w-full">
       <h1 className="font-bold text-3xl py-2">Gameboard</h1>
+      <button
+        onClick={restartGame}
+        className="text-xs left-0 top-0 m-2 bg-orange-500 hover:bg-orange-700 text-white font-normal py-2 px-4 rounded absolute"
+      >
+        🔁 Restart
+      </button>
       <div className="flex flex-col  w-full">
         <div className="flex flex-col relative">
-          {winner && <div className="absolute w-full h-full bg-black/20"></div>}
+          {game.winner && (
+            <div className="absolute flex justify-center items-center w-full h-full bg-black/80 z-10">
+              <div>
+                <h1 className="bg-[#202124] font-bold text-3xl rounded py-2 px-4 flex justify-center items-center">{game.winner.name} has won the game!</h1>
+              </div>
+            </div>
+          )}
           <div className="flex flex-col justify-center items-center  py-2">
             <p>
               {playerToPlay?.name} is playing
@@ -98,7 +96,7 @@ export default function Gameboard({
           <div className="flex flex-col justify-center items-center  py-2">
             <h2 className="text-xl font-medium">Players</h2>
             <ul className="flex flex-wrap justify-center items-center">
-              {game.players?.map((player) => (
+              {game.alivePlayers?.map((player) => (
                 <li
                   key={player.index}
                   className={`p-4 bg-white/5 shadow-xl flex flex-col justify-between items-center rounded-xl m-2 relative
@@ -161,28 +159,16 @@ export default function Gameboard({
                   game={game}
                   socket={socket}
                   myIndex={myIndex}
-                  alivePlayers={alivePlayers}
                   playerToPlay={playerToPlay}
+                  setIsMyTurn={setIsMyTurn}
                 />
               )}
               {!playerToPlay?.drawnCard && playerToPlay?.hasSuperPower && (
-                <SuperPowers
-                  game={game}
-                  socket={socket}
-                  myIndex={myIndex}
-                  alivePlayers={alivePlayers}
-                  deadPlayers={deadPlayers}
-                  playerToPlay={playerToPlay}
-                />
+                <SuperPowers game={game} socket={socket} myIndex={myIndex} />
               )}
             </div>
           )}
         </div>
-        {winner && (
-          <div>
-            <h1>{winner.name} has won the game!</h1>
-          </div>
-        )}
       </div>
     </div>
   );

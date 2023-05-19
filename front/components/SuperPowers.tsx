@@ -5,16 +5,10 @@ export default function SuperPowers({
   game,
   socket,
   myIndex,
-  alivePlayers,
-  deadPlayers,
-  playerToPlay,
 }: {
   game: TGame;
   socket: Socket;
   myIndex: number;
-  alivePlayers: TPlayer[];
-  deadPlayers: TPlayer[];
-  playerToPlay: TPlayer;
 }) {
   const [actionChosen, setActionChosen] = useState<string>("");
   const [targetIndex, setTargetIndex] = useState<number>(-1);
@@ -27,7 +21,7 @@ export default function SuperPowers({
       superShield();
     }
     if (actionChosen === "resurrect") {
-      const targetPlayer = alivePlayers.find(
+      const targetPlayer = game.alivePlayers.find(
         (player) => player.index === targetIndex
       );
       if (targetPlayer?.life.length && targetPlayer?.life.length > 0) return;
@@ -73,7 +67,7 @@ export default function SuperPowers({
             >
               Super Shield
             </button>
-            {deadPlayers.length > 0 && (
+            {game.deadPlayers.length > 0 && (
               <button
                 className="bg-yellow-500 hover:bg-yellow-700 text-white font-bold py-2 px-4 rounded m-2"
                 onClick={() => setActionChosen("resurrect")}
@@ -90,12 +84,12 @@ export default function SuperPowers({
             onClick={() => setActionChosen("")}
             className="absolute left-0 bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded"
           >
-            ⬅️ Change action
+            ⬅️
           </button>
           <div className="flex flex-wrap">
             {(actionChosen === "super-attack" ||
               actionChosen === "super-shield") &&
-              alivePlayers.map((player) => (
+              game.alivePlayers.map((player) => (
                 <div key={player.index}>
                   <button
                     className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded m-2"
@@ -108,7 +102,7 @@ export default function SuperPowers({
                 </div>
               ))}
             {actionChosen === "resurrect" &&
-              deadPlayers.map((player) => (
+              game.deadPlayers.map((player) => (
                 <div key={player.index}>
                   <button
                     className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded m-2"
@@ -129,11 +123,11 @@ export default function SuperPowers({
             onClick={() => setTargetIndex(-1)}
             className="absolute left-0 bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded"
           >
-            ⬅️ Change target
+            ⬅️
           </button>
           <p>
             You have chosen to {actionChosen} on:
-            {alivePlayers[targetIndex].name}
+            {game.players[targetIndex].name}
           </p>
           <button
             className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded"
