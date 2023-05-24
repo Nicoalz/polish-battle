@@ -66,8 +66,8 @@ export class Game {
 
   private applyDamageToLife(dmg: number, target: Player) {
     while (dmg > 0 && target.life.length > 0) {
-      target.resetChargedCard();
       if (dmg >= target.life[0].value) {
+        target.resetChargedCard();
         dmg -= target.life[0].value;
         target.life[0].setValue(0);
         target.life.shift();
