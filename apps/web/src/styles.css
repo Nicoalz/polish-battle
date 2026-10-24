@@ -1,0 +1,26 @@
+@import 'tailwindcss';
+
+:root {
+  color-scheme: dark;
+}
+
+body {
+  margin: 0;
+  background: #121318;
+  color: #e7eaed;
+  font-family: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+}
+
+/* Éclair d'impact : une seule couche, relancée à chaque choc via sa clé React. */
+@keyframes pb-flash {
+  from {
+    opacity: var(--pb-flash, 0.3);
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+.pb-flash {
+  animation: pb-flash 420ms ease-out forwards;
+}

@@ -1,0 +1,22 @@
+{
+  "name": "polish-battle",
+  "version": "2.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Polish Battle \u2014 jeu de cartes multijoueur temps r\u00e9el",
+  "scripts": {
+    "dev": "pnpm --parallel --filter \"./apps/*\" dev",
+    "build": "pnpm -r build",
+    "test": "pnpm --filter @pb/engine test",
+    "sim": "pnpm --filter @pb/engine sim",
+    "typecheck": "pnpm -r typecheck",
+    "smoke": "pnpm --filter @pb/server smoke",
+    "dev:server": "pnpm --filter @pb/server dev",
+    "dev:web": "pnpm --filter @pb/web dev",
+    "verify": "pnpm typecheck && pnpm test && pnpm smoke",
+    "start": "pnpm --filter @pb/server start"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

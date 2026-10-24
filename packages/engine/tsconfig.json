@@ -1,0 +1,10 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": true,
+    // Types Node uniquement pour les globales partagées (structuredClone) et le
+    // simulateur en ligne de commande : le moteur lui-même reste neutre.
+    "types": ["node"]
+  },
+  "include": ["src/**/*.ts", "test/**/*.ts"]
+}

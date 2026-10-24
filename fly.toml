@@ -1,0 +1,26 @@
+# Déploiement Fly.io. Le serveur de jeu sert aussi le client compilé : une seule
+# application, une seule origine, pas de configuration côté client.
+#
+#   fly launch --no-deploy    (une fois, pour créer l'application)
+#   fly deploy
+
+app = "polish-battle"
+primary_region = "cdg"
+
+[build]
+  dockerfile = "Dockerfile"
+
+[http_service]
+  internal_port = 2567
+  force_https = true
+  # Les parties vivent en mémoire : « suspend » met la machine en veille en conservant
+  # son état, là où un arrêt franc perdrait les parties en cours.
+  auto_stop_machines = "suspend"
+  auto_start_machines = true
+  # Une seule machine : les WebSocket d'un même salon doivent atterrir au même endroit.
+  min_machines_running = 1
+
+[[vm]]
+  memory = "512mb"
+  cpu_kind = "shared"
+  cpus = 1

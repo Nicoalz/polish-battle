@@ -1,0 +1,8 @@
+packages:
+  - 'packages/*'
+  - 'apps/*'
+
+# esbuild (vitest, tsx, vite) relie son binaire natif à l'installation.
+allowBuilds:
+  esbuild: true
+  msgpackr-extract: false
