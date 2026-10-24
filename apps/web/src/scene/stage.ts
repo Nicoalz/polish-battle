@@ -7,6 +7,25 @@ import type { Card } from '@pb/engine'
  * à leur rythme sans provoquer de rendu de l'interface.
  */
 
+/**
+ * Addition d'une carte d'attaque et d'une charge dépensée.
+ *
+ * C'est le seul moment où la valeur d'une charge se découvre : elle arrive de son siège,
+ * se retourne, s'additionne à la carte d'attaque, et les deux se fondent en une seule
+ * carte portant le total. Sans cette pause, le joueur voit partir un chiffre qu'il n'a
+ * jamais lu.
+ */
+export type Combination = {
+  attack: Card
+  charge: Card
+  /** Carte résultante, dont la valeur est la somme des deux. */
+  total: Card
+  /** Siège d'où la charge s'envole. */
+  fromSeat: number
+  startedAt: number
+  duration: number
+}
+
 export type Flight = {
   cards: Card[]
   from: [number, number, number]
@@ -26,6 +45,7 @@ type Stage = {
    * en scène.
    */
   reveal?: Card
+  combination?: Combination
   flight?: Flight
   /** Date du dernier impact : éclair et secousse en découlent par décroissance. */
   impactAt: number
@@ -36,6 +56,7 @@ type Stage = {
   focusSeat?: number
 
   setReveal: (card: Card | undefined) => void
+  setCombination: (combination: Combination | undefined) => void
   setFlight: (flight: Flight | undefined) => void
   impact: (power: number, seat?: number) => void
   focus: (seat: number | undefined) => void
@@ -46,6 +67,7 @@ export const useStage = create<Stage>((set) => ({
   impactPower: 0,
 
   setReveal: (card) => set({ reveal: card }),
+  setCombination: (combination) => set({ combination }),
   setFlight: (flight) => set({ flight }),
   impact: (power, seat) =>
     set({ impactAt: performance.now(), impactPower: power, impactSeat: seat }),

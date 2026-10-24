@@ -7,6 +7,7 @@ import { PlayerSeat } from './PlayerSeat'
 import { Card3D } from './Card3D'
 import { Particles } from './Particles'
 import { Projectile } from './Projectile'
+import { Combination } from './Combination'
 import { CameraRig } from './CameraRig'
 import { CARD_THICKNESS } from './textures'
 import { DECK_POSITION, layout, seatColor, setLayout } from './seats'
@@ -44,7 +45,9 @@ function Deck() {
  */
 function RevealedCard() {
   const reveal = useStage((state) => state.reveal)
-  if (!reveal) return null
+  const combining = useStage((state) => Boolean(state.combination))
+  // Pendant l'addition, c'est elle qui tient la carte d'attaque.
+  if (!reveal || combining) return null
 
   return (
     <DrawnCardEntry key={reveal.id}>
@@ -136,6 +139,7 @@ export function GameScene({ game, mySeat, compact, selectableIds, onSelectTarget
       <Table />
       <Deck />
       <RevealedCard />
+      <Combination mySeat={mySeat} total={total} />
       <Projectile />
       {!degraded && <Particles color={accent} />}
 

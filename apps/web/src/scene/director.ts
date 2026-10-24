@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react'
-import type { GameState } from '@pb/engine'
+import type { Card, GameState } from '@pb/engine'
 import { useGame, type Batch } from '../net/store'
 import { useSettings } from '../settings'
 import { playSfx, vibrate, type Sfx } from '../audio/synth'
@@ -18,6 +18,8 @@ import { DECK_POSITION, DRAWN_CARD_POSITION, seatAnchor } from './seats'
 const DURATIONS = {
   /** Temps laissé à la table pour lire la carte qui vient de se dévoiler. */
   reveal: 820,
+  /** Addition attaque + charge : il faut pouvoir lire les deux avant qu'elles fusionnent. */
+  combine: 1600,
   place: 460,
   attack: 520,
   superWindup: 420,
@@ -55,6 +57,17 @@ function seatOf(state: GameState | undefined, playerId: string): number | undefi
   return state?.players.find((player) => player.id === playerId)?.seat
 }
 
+/**
+ * Carte résultante d'une addition.
+ *
+ * Son rang ne descend jamais à zéro : c'est ce qui marque la carte maudite, et un total
+ * nul se lirait à tort comme une malédiction plutôt que comme un coup dans le vide.
+ */
+function sumOf(attack: Card, charge: Card): Card {
+  const value = attack.value + charge.value
+  return { id: `sum:${attack.id}`, rank: Math.max(1, value), value }
+}
+
 export function useDirector(mySeat: number, total: number): void {
   const running = useRef(false)
   const queued = useGame((state) => state.queue.length)
@@ -78,6 +91,7 @@ export function useDirector(mySeat: number, total: number): void {
         stage.focus(undefined)
         stage.setFlight(undefined)
         stage.setReveal(undefined)
+        stage.setCombination(undefined)
         // Rattrapage de sécurité : on valide la dernière version effectivement reçue.
         commit(useGame.getState().version)
         setAnimating(false)
@@ -118,7 +132,11 @@ async function play(batch: Batch, mySeat: number, total: number): Promise<void> 
   }
 
   const { events, version } = batch
-  const commit = () => settle(version, deadline + 2000)
+  /** Valide l'état **et** inscrit l'action à l'historique : les deux doivent coïncider. */
+  const commit = async () => {
+    await settle(version, deadline + 2000)
+    useGame.getState().remember(events)
+  }
 
   const attack = events.find((event) => event.t === 'attack-resolved')
   const superUsed = events.find((event) => event.t === 'super-used')
@@ -144,13 +162,33 @@ async function play(batch: Batch, mySeat: number, total: number): Promise<void> 
   }
 
   if (attack) {
+    const fromSeat = seatOf(before, attack.fromId)
     const toSeat = seatOf(before, attack.toId)
     const duration = attack.kind === 'super' ? DURATIONS.superFlight : DURATIONS.attack
+
+    // Une charge dépensée se découvre maintenant, et à ce seul moment : on la fait venir
+    // de son siège, se retourner, puis s'additionner à la carte d'attaque.
+    const [card, spent] = attack.cards
+    let payload = attack.cards
+    if (card && spent && fromSeat !== undefined) {
+      payload = [sumOf(card, spent)]
+      stage.setCombination({
+        attack: card,
+        charge: spent,
+        total: payload[0]!,
+        fromSeat,
+        startedAt: performance.now(),
+        duration: DURATIONS.combine * (quick ? 0.4 : 1),
+      })
+      sound('charge')
+      await hold(DURATIONS.combine)
+      stage.setCombination(undefined)
+    }
 
     if (toSeat !== undefined) {
       stage.setReveal(undefined)
       stage.setFlight({
-        cards: attack.cards,
+        cards: payload,
         from: DRAWN_CARD_POSITION,
         to: seatAnchor(toSeat, mySeat, total, 0.7),
         kind: 'attack',

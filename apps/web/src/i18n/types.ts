@@ -59,6 +59,23 @@ export type Dict = {
     readonly cursedCard: string
   }
 
+  readonly history: {
+    readonly title: string
+    readonly empty: string
+    readonly started: string
+    readonly skipped: string
+    readonly attack: (from: string, to: string, cards: string) => string
+    readonly superAttack: (from: string, to: string, cards: string) => string
+    readonly damage: (amount: number) => string
+    readonly blocked: string
+    readonly shield: (from: string, to: string, value: number, self: boolean) => string
+    readonly superShield: (from: string, to: string, value: number, self: boolean) => string
+    readonly charge: (from: string, to: string, self: boolean) => string
+    readonly resurrect: (from: string, to: string) => string
+    readonly eliminated: (who: string) => string
+    readonly won: (who: string) => string
+  }
+
   readonly settings: {
     readonly title: string
     readonly language: string

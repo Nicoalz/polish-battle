@@ -2,11 +2,11 @@ import { useEffect, useMemo, useState } from 'react'
 import { legalActions, type ActionType, type GameState } from '@pb/engine'
 import { useGame } from './net/store'
 import { useI18n } from './i18n'
-import { describeEvent, describeRejection } from './i18n/describe'
 import { SettingsMenu } from './SettingsMenu'
 import { useIsCompact } from './useViewport'
 import { GameScene } from './scene/GameScene'
 import { Nameplate } from './Nameplate'
+import { History } from './History'
 import { seatColor } from './scene/seats'
 import { useDirector } from './scene/director'
 import { useStage } from './scene/stage'
@@ -31,10 +31,9 @@ const ACTION_ORDER: ActionType[] = [
  * des coups que le serveur vient de consommer.
  */
 export function GameView({ game, display }: { game: GameState; display: GameState }) {
-  const { playerId, code, log, send, command, leave } = useGame()
+  const { playerId, code, send, command, leave } = useGame()
   const t = useI18n((state) => state.t)
   const [pending, setPending] = useState<ActionType | null>(null)
-  const [showLog, setShowLog] = useState(false)
 
   const me = display.players.find((player) => player.id === playerId)
   const myTurn = game.players.find((player) => player.seat === game.turnSeat)?.id === playerId
@@ -212,27 +211,8 @@ export function GameView({ game, display }: { game: GameState; display: GameStat
         </div>
       )}
 
-      {/* ------------------------------ journal ------------------------------ */}
-      {/* Décalés vers le haut sur mobile : la barre d'action occupe déjà le bas. */}
-      <div className="absolute bottom-28 left-2 z-30 max-w-[16rem] sm:bottom-3 sm:left-3 sm:max-w-[22rem]">
-        <button
-          className="rounded-full border border-white/20 bg-white/10 px-3 py-1 text-xs text-slate-200 hover:bg-white/20"
-          onClick={() => setShowLog((value) => !value)}
-        >
-          {t.table.log} {showLog ? '▾' : '▸'}
-        </button>
-        {showLog && (
-          <ol className="mt-2 max-h-64 overflow-auto rounded-lg bg-black/60 p-3 font-mono text-[11px] text-slate-300 backdrop-blur-sm">
-            {log.map((entry) => (
-              <li key={entry.id} className="whitespace-pre-wrap">
-                {entry.kind === 'event'
-                  ? describeEvent(entry.event, t, display)
-                  : describeRejection(entry.code, t)}
-              </li>
-            ))}
-          </ol>
-        )}
-      </div>
+      {/* ------------------------------ historique ------------------------------ */}
+      <History game={display} />
 
       {/* Identité du joueur local : elle vit ici et non sur le tapis, où elle
           recouvrirait ses propres cartes. */}

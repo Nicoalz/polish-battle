@@ -36,11 +36,12 @@ export type ConnectionStatus = 'idle' | 'connecting' | 'connected' | 'reconnecti
 export type Batch = { version: number; events: GameEvent[] }
 
 /**
- * Le journal conserve les événements bruts, pas des phrases : la mise en mots a lieu
- * à l'affichage, donc changer de langue retraduit aussi l'historique.
+ * L'historique conserve les événements bruts, par action, et non des phrases : la mise
+ * en mots a lieu à l'affichage, donc changer de langue retraduit aussi le passé. Un lot
+ * correspondant à une action, il donnera exactement une ligne.
  */
 export type LogEntry =
-  | { id: number; kind: 'event'; event: GameEvent }
+  | { id: number; kind: 'action'; events: GameEvent[] }
   | { id: number; kind: 'rejection'; code: RejectionCode }
 
 type Store = {
@@ -76,6 +77,8 @@ type Store = {
   consume: () => Batch | undefined
   /** Fait rattraper à l'affichage l'état produit par le lot `version`. */
   commit: (version: number) => void
+  /** Inscrit une action à l'historique, au moment où elle devient visible. */
+  remember: (events: GameEvent[]) => void
   setAnimating: (animating: boolean) => void
 }
 
@@ -108,12 +111,11 @@ export const useGame = create<Store>((set, get) => {
     })
 
     joined.onMessage('events', (payload: Batch) => {
+      // L'historique n'est pas alimenté ici : il le sera au moment où la mise en scène
+      // dévoile le résultat. L'inscrire à la réception reviendrait à annoncer les dégâts
+      // pendant que la carte est encore en l'air.
       set((current) => ({
         queue: [...current.queue, { version: payload.version, events: payload.events }],
-        log: [
-          ...current.log,
-          ...payload.events.map((event): LogEntry => ({ id: logSeq++, kind: 'event', event })),
-        ].slice(-60),
       }))
     })
 
@@ -242,6 +244,12 @@ export const useGame = create<Store>((set, get) => {
     commit(version) {
       if (!latestRaw || latestRaw.version < version) return
       set({ display: fromWire(latestRaw), playedVersion: version })
+    },
+
+    remember(events) {
+      set((current) => ({
+        log: [...current.log, { id: logSeq++, kind: 'action', events } as LogEntry].slice(-60),
+      }))
     },
 
     setAnimating(animating) {

@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import { isAlive, legalActions, type Action, type ActionType, type GameState } from '@pb/engine'
 import { useGame } from '../net/store'
 import { useI18n } from '../i18n'
-import { describeEvent, describeRejection } from '../i18n/describe'
+import { describeAction, describeRejection } from '../i18n/history'
 import { LocaleSwitch } from '../i18n/LocaleSwitch'
 import { CardView } from './Card'
 
@@ -139,8 +139,8 @@ export function DebugTable({ game }: { game: GameState }) {
           <ol className="max-h-72 overflow-auto px-3 pb-3 font-mono text-xs text-slate-400">
             {log.map((entry) => (
               <li key={entry.id} className="whitespace-pre-wrap">
-                {entry.kind === 'event'
-                  ? describeEvent(entry.event, t, game)
+                {entry.kind === 'action'
+                  ? describeAction(entry.events, t, game)
                   : describeRejection(entry.code, t)}
               </li>
             ))}

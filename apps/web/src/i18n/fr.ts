@@ -44,6 +44,27 @@ export const fr: Dict = {
     cursedCard: 'la carte maudite : elle vaut 0 dans tous ses rôles',
   },
 
+  history: {
+    title: 'Historique',
+    empty: 'La partie n’a pas encore commencé.',
+    started: '— la partie commence —',
+    skipped: 'tour passé',
+    attack: (from, to, cards) => `${from} attaque ${to} avec ${cards}`,
+    superAttack: (from, to, cards) => `💥 ${from} super-attaque ${to} avec ${cards}`,
+    damage: (amount) => ` — ${amount} de dégâts`,
+    blocked: ' — bloqué',
+    shield: (from, to, value, self) =>
+      self ? `${from} se protège avec ${value}` : `${from} pose un bouclier ${value} sur ${to}`,
+    superShield: (from, to, value, self) =>
+      self
+        ? `💥 ${from} se blinde avec ${value}`
+        : `💥 ${from} pose un super-bouclier ${value} sur ${to}`,
+    charge: (from, to, self) => (self ? `${from} se charge` : `${from} charge ${to}`),
+    resurrect: (from, to) => `✨ ${from} ressuscite ${to}`,
+    eliminated: (who) => ` · ☠ ${who} est éliminé`,
+    won: (who) => ` · 🏆 ${who} gagne`,
+  },
+
   settings: {
     title: 'Réglages',
     language: 'Langue',

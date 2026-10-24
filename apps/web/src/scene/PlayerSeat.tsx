@@ -66,6 +66,11 @@ export function PlayerSeat({
   const halo = Math.max(1.05, (player.battery ? batteryX + CARD_WIDTH / 2 : lifeWidth / 2) + 0.45)
   const dimmed = !alive
 
+  // Vrai quand cette charge est justement en train d'être dépensée dans une attaque.
+  const spending = useStage(
+    (state) => state.combination !== undefined && state.combination.fromSeat === player.seat,
+  )
+
   const cards = useRef<THREE.Group>(null)
   const glow = useRef<THREE.MeshBasicMaterial>(null)
   // Chaque siège respire à son propre rythme : en phase, la table aurait l'air mécanique.
@@ -153,8 +158,10 @@ export function PlayerSeat({
         />
       ))}
 
-      {/* La charge se montre face cachée : on sait qu'elle est là, pas ce qu'elle vaut. */}
-      {player.battery && (
+      {/* La charge se montre face cachée : on sait qu'elle est là, pas ce qu'elle vaut.
+          Pendant qu'elle s'envole pour s'additionner, c'est l'animation qui la tient :
+          la laisser ici la montrerait en double. */}
+      {player.battery && !spending && (
         <Card3D
           card={player.battery}
           role="battery"

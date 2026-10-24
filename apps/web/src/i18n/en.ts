@@ -44,6 +44,27 @@ export const en: Dict = {
     cursedCard: 'the cursed card: worth 0 in every role',
   },
 
+  history: {
+    title: 'History',
+    empty: 'The game has not started yet.',
+    started: '— the game begins —',
+    skipped: 'turn skipped',
+    attack: (from, to, cards) => `${from} attacks ${to} with ${cards}`,
+    superAttack: (from, to, cards) => `💥 ${from} super-attacks ${to} with ${cards}`,
+    damage: (amount) => ` — ${amount} damage`,
+    blocked: ' — blocked',
+    shield: (from, to, value, self) =>
+      self ? `${from} shields up with ${value}` : `${from} puts a ${value} shield on ${to}`,
+    superShield: (from, to, value, self) =>
+      self
+        ? `💥 ${from} super-shields up with ${value}`
+        : `💥 ${from} puts a ${value} super shield on ${to}`,
+    charge: (from, to, self) => (self ? `${from} charges up` : `${from} charges ${to}`),
+    resurrect: (from, to) => `✨ ${from} resurrects ${to}`,
+    eliminated: (who) => ` · ☠ ${who} is out`,
+    won: (who) => ` · 🏆 ${who} wins`,
+  },
+
   settings: {
     title: 'Settings',
     language: 'Language',
