@@ -3,6 +3,10 @@
 #
 # Render renseigne lui-même PORT ; le serveur le lit. `NODE_ENV=production` est
 # indispensable : c'est lui qui active le service des fichiers du client.
+#
+# Pas de `corepack enable` dans la commande de build : il écrit ses raccourcis dans
+# /usr/bin, en lecture seule sur l'hôte. Render fournit déjà pnpm dès qu'il repère un
+# pnpm-lock.yaml, et `PNPM_VERSION` en fixe la version.
 services:
   - type: web
     name: polish-battle
@@ -10,11 +14,13 @@ services:
     plan: free
     region: frankfurt
     branch: v2-rewrite
-    buildCommand: corepack enable && pnpm install --frozen-lockfile && pnpm --filter @pb/web build
+    buildCommand: pnpm install --frozen-lockfile && pnpm --filter @pb/web build
     startCommand: pnpm --filter @pb/server start
     healthCheckPath: /health
     envVars:
       - key: NODE_ENV
         value: production
       - key: NODE_VERSION
-        value: '22'
+        value: '24'
+      - key: PNPM_VERSION
+        value: 11.9.0

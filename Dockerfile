@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1
 
 # --- Construction : on installe tout le monorepo et on compile le client -------------
-FROM node:22-alpine AS build
+FROM node:24-alpine AS build
 WORKDIR /app
 RUN corepack enable
 
@@ -17,7 +17,7 @@ COPY apps apps
 RUN pnpm --filter @pb/web build
 
 # --- Exécution ----------------------------------------------------------------------
-FROM node:22-alpine AS runtime
+FROM node:24-alpine AS runtime
 WORKDIR /app
 ENV NODE_ENV=production
 ENV PORT=2567

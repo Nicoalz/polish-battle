@@ -74,13 +74,19 @@ origine, rien à configurer côté client.
 | Champ | Valeur |
 |---|---|
 | Runtime | Node |
-| Build command | `corepack enable && pnpm install --frozen-lockfile && pnpm --filter @pb/web build` |
+| Build command | `pnpm install --frozen-lockfile && pnpm --filter @pb/web build` |
 | Start command | `pnpm --filter @pb/server start` |
 | Health check path | `/health` |
-| Variable | `NODE_ENV=production` |
+| Variables | `NODE_ENV=production`, `NODE_VERSION=24`, `PNPM_VERSION=11.9.0` |
 
 `NODE_ENV=production` n'est pas optionnel : c'est lui qui déclenche le service des
 fichiers du client. Sans lui, le serveur répond mais la page est vide.
+
+N'ajoute pas `corepack enable` à la commande de build : corepack écrit ses raccourcis
+dans `/usr/bin`, en lecture seule sur l'hôte, et le build échoue avec `EROFS`. Render
+fournit pnpm de lui-même dès qu'il repère le lockfile. Sans `NODE_VERSION`, il installe
+la dernière version satisfaisant `engines`, ce qui peut être une majeure jamais testée
+ici — d'où aussi le fichier `.node-version` à la racine.
 
 Garde **une seule instance** : les parties vivent en mémoire, et deux instances
 enverraient deux joueurs du même salon sur deux tables différentes. Sur le plan gratuit,
