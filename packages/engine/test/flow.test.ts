@@ -191,6 +191,43 @@ describe('le salon et la mise en place (GAME_RULES §3)', () => {
   })
 })
 
+describe('les places', () => {
+  const table = (seed: number) => {
+    let state = createGame(seed)
+    for (const id of ['a', 'b', 'c', 'd']) state = addPlayer(state, { id, name: id })
+    return startGame(state).state
+  }
+
+  it('changent d’une manche à l’autre', () => {
+    const arrangements = new Set<string>()
+    for (let seed = 0; seed < 60; seed++) {
+      arrangements.add(table(seed).players.map((p) => p.id).join(''))
+    }
+    expect(arrangements.size).toBeGreaterThan(1)
+  })
+
+  it('gardent tout le monde, une fois chacun, et numérotées dans l’ordre', () => {
+    for (let seed = 0; seed < 60; seed++) {
+      const players = table(seed).players
+      expect([...players].map((p) => p.id).sort()).toEqual(['a', 'b', 'c', 'd'])
+      expect(players.map((p) => p.seat)).toEqual([0, 1, 2, 3])
+    }
+  })
+
+  it('ne déplacent pas le rôle d’hôte', () => {
+    // L'hôte est une propriété du joueur, pas de la chaise : il la garde en changeant de place.
+    for (let seed = 0; seed < 60; seed++) {
+      const hosts = table(seed).players.filter((p) => p.isHost)
+      expect(hosts).toHaveLength(1)
+      expect(hosts[0]!.id).toBe('a')
+    }
+  })
+
+  it('restent reproductibles à graine égale', () => {
+    expect(table(42).players.map((p) => p.id)).toEqual(table(42).players.map((p) => p.id))
+  })
+})
+
 describe('le siège de départ', () => {
   const table = (seed: number) => {
     let state = createGame(seed)

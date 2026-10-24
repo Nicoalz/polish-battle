@@ -206,6 +206,26 @@ export function transferHost(state: GameState, playerId: string): GameState {
   return next
 }
 
+/**
+ * Redistribue les places autour de la table.
+ *
+ * Sans cela, les places suivent l'ordre d'arrivée dans le salon : on rejoue manche après
+ * manche avec les mêmes voisins, et surtout toujours juste après le même joueur. Or
+ * l'ordre du tour est une donnée du jeu — savoir qui joue après soi change ce qu'on ose.
+ */
+function shuffleSeats(state: GameState): void {
+  for (let index = state.players.length - 1; index > 0; index--) {
+    const [seed, pick] = nextInt(state.rng, index + 1)
+    state.rng = seed
+    const current = state.players[index]!
+    state.players[index] = state.players[pick]!
+    state.players[pick] = current
+  }
+  state.players.forEach((player, index) => {
+    player.seat = index
+  })
+}
+
 /** Démarre ou relance une partie : tout le monde est resservi à neuf. */
 export function startGame(state: GameState): ApplyResult {
   if (state.players.length < MIN_PLAYERS) {
@@ -218,12 +238,13 @@ export function startGame(state: GameState): ApplyResult {
   const next = structuredClone(state)
   next.phase = 'playing'
   next.winnerId = undefined
+
+  // Nouvelles places à chaque manche, puis nouvelle main pour tout le monde.
+  shuffleSeats(next)
   for (const player of next.players) dealPlayer(next, player)
 
-  // Le siège de départ est tiré au sort. La simulation montre que la position dans
-  // l'ordre du tour pèse sur les chances de victoire (le dernier siège est avantagé à
-  // 3 joueurs et plus, le premier l'est en duel) : garder un départ fixe reviendrait à
-  // pénaliser systématiquement le premier arrivé dans le salon.
+  // Et le siège qui ouvre est lui aussi tiré au sort : « où l'on est assis » et « qui
+  // commence » restent deux questions distinctes.
   const [seed, startSeat] = nextInt(next.rng, next.players.length)
   next.rng = seed
   next.turnSeat = startSeat

@@ -30,6 +30,11 @@ fait : taper, changer un bouclier, ou charger une batterie.
   La partie est créée à ce moment-là.
 - On peut rejoindre **tant que `isStarted === false`**.
 - Le chef lance la partie (le front exige ≥ 2 joueurs, [front/pages/game.tsx:49](front/pages/game.tsx#L49)).
+- **Les places sont redistribuées à chaque manche.** Sans cela on rejoue toujours avec les
+  mêmes voisins et, surtout, toujours juste après le même joueur — or savoir qui joue après
+  soi change ce qu'on ose. Le rôle d'hôte, lui, appartient au joueur et non à la chaise.
+- Le siège qui ouvre est tiré au sort séparément : « où l'on est assis » et « qui commence »
+  restent deux questions distinctes.
 - Chaque joueur démarre avec :
   - **2 cartes de vie** tirées au hasard
   - **1 carte bouclier** tirée au hasard
