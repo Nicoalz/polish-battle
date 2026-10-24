@@ -100,12 +100,6 @@ export function DebugTable({ game }: { game: GameState }) {
                   <CardView card={player.battery} role="battery" />
                 </div>
               )}
-              {player.drawn && (
-                <div className="mt-1 flex items-center gap-1 text-xs text-slate-400">
-                  <span className="w-16">{t.table.drawn}</span>
-                  <CardView card={player.drawn} role="drawn" />
-                </div>
-              )}
             </li>
           )
         })}
@@ -118,22 +112,16 @@ export function DebugTable({ game }: { game: GameState }) {
             {[...byType.entries()].map(([type, list]) => (
               <div key={type} className="flex flex-wrap items-center gap-2">
                 <span className="w-44 shrink-0 text-sm text-slate-400">{t.actions[type]}</span>
-                {type === 'draw' ? (
-                  <button className={BTN} onClick={() => send({ type: 'draw' })}>
-                    {t.table.drawCard}
-                  </button>
-                ) : (
-                  list.map((action) => {
+                {list.map((action) => {
                     const targetId = 'targetId' in action ? action.targetId : ''
                     const target = game.players.find((player) => player.id === targetId)
-                    return (
-                      <button key={targetId} className={BTN_GHOST} onClick={() => send(action)}>
-                        {target?.name ?? targetId}
-                        {targetId === playerId ? ` ${t.table.me}` : ''}
-                      </button>
-                    )
-                  })
-                )}
+                  return (
+                    <button key={targetId} className={BTN_GHOST} onClick={() => send(action)}>
+                      {target?.name ?? targetId}
+                      {targetId === playerId ? ` ${t.table.me}` : ''}
+                    </button>
+                  )
+                })}
               </div>
             ))}
           </div>

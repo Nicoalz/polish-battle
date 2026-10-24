@@ -1,3 +1,4 @@
+import { drawCard } from '../src/cards'
 import type { Card, GameState, PlayerState } from '../src/types'
 
 let sequence = 0
@@ -55,4 +56,42 @@ export function duel(
 
 export function lifeValues(state: GameState, playerId: string): number[] {
   return state.players.find((p) => p.id === playerId)!.life.map((c) => c.value)
+}
+
+const seeds = new Map<number, number>()
+
+/**
+ * Graine dont le prochain tirage donne exactement cette valeur.
+ *
+ * Un coup se jouant désormais sans connaître sa carte, un test ne peut plus poser la
+ * carte à l'avance : il règle l'aléa pour que le tirage tombe où il veut.
+ */
+export function seedFor(value: number): number {
+  const cached = seeds.get(value)
+  if (cached !== undefined) return cached
+
+  for (let seed = 1; seed < 100_000; seed++) {
+    if (drawCard({ rng: seed, cardSeq: 0 } as GameState).value === value) {
+      seeds.set(value, seed)
+      return seed
+    }
+  }
+  throw new Error(`aucune graine ne produit la valeur ${value}`)
+}
+
+/** Duel dont le prochain tirage vaudra `value`. */
+export function duelDrawing(
+  value: number,
+  a: Partial<PlayerState> = {},
+  b: Partial<PlayerState> = {},
+): GameState {
+  const state = duel(a, b)
+  state.rng = seedFor(value)
+  return state
+}
+
+/** Table dont le prochain tirage vaudra `value`. */
+export function drawing(value: number, state: GameState): GameState {
+  state.rng = seedFor(value)
+  return state
 }

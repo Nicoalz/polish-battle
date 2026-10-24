@@ -38,26 +38,34 @@ fait : taper, changer un bouclier, ou charger une batterie.
 
 ## 4. Déroulement d'un tour
 
-L'ordre est l'ordre d'arrivée, **en sautant les morts**. À son tour, le joueur a **deux voies
-mutuellement exclusives** :
+L'ordre est l'ordre d'arrivée, **en sautant les morts**.
+
+> **⚠ La v1 avait inversé le cœur du jeu.** Elle faisait piocher d'abord, puis choisir quoi
+> faire de la carte. C'est l'inverse : **on s'engage sans connaître sa carte**. Voir
+> l'annexe v2.
+
+À son tour, le joueur choisit un coup et une cible. **Ensuite seulement** la carte se tire
+et se révèle à toute la table.
 
 ```
-Mon tour
-├─ (A) Piocher une carte  →  choisir 1 action parmi 3, sur n'importe quel joueur vivant (soi inclus)
-│      ├─ Attaquer
-│      ├─ Changer un bouclier
-│      └─ Charger une batterie
-└─ (B) Utiliser mon super-pouvoir (sans piocher, 1× par partie)
-       ├─ Super Attaque
-       ├─ Super Bouclier
-       └─ Résurrection
+Mon tour — je choisis, à l'aveugle :
+├─ Attaquer <joueur vivant>
+├─ Changer le bouclier de <joueur vivant>
+├─ Charger <joueur vivant sans charge>
+└─ et si mon super-pouvoir est intact (1× par partie)
+   ├─ Super Attaque sur <joueur vivant>
+   ├─ Super Bouclier sur <joueur vivant>
+   └─ Ressusciter <joueur mort>
+
+… puis la carte se dévoile et le coup se résout.
 ```
 
-**Chaque action termine le tour.** Le super-pouvoir n'est proposé que si aucune carte n'a été
-piochée ([back/game.ts:120](back/game.ts#L120), [front/components/Gameboard.tsx:172](front/components/Gameboard.tsx#L172))
-— piocher ferme donc l'accès au super-pouvoir pour ce tour.
+**Chaque action termine le tour.** Attaquer est donc un pari, et changer un bouclier aussi,
+dans les deux sens : la carte peut blinder la cible comme la mettre à nu.
 
 ## 5. Les 3 actions normales
+
+Chacune tire sa propre carte au moment de se résoudre.
 
 ### ⚔️ Attaquer — `attack(player, target)`
 
@@ -76,9 +84,9 @@ adversaire — ce qui permet aussi de **saboter** : remplacer un roi (13) par un
 
 ### 🔋 Charger — `chargeCard(player, target)`
 
-La carte piochée devient la **batterie** de la cible. La batterie s'ajoute aux dégâts de la
-prochaine attaque de son porteur. **Une seule batterie à la fois** : si la cible en a déjà une,
-l'action est refusée (et, dans le code actuel, le tour ne passe même pas — cf. §9).
+La carte tirée devient la **charge** de la cible, **sans jamais être révélée**. Elle s'ajoute
+aux dégâts de la prochaine attaque de son porteur, et ne se découvre qu'à ce moment-là.
+**Une seule charge à la fois** : une cible déjà chargée n'est pas proposée.
 
 ## 6. Résolution des dégâts (le cœur du jeu)
 
@@ -131,7 +139,7 @@ Serveur → clients (broadcast room) : `game-state` (l'objet `Game` complet) et 
 (`{ text, cards[] }`, le texte narratif + les cartes à illustrer). Le serveur attend **1 s** entre
 l'event `action` et le `game-state` qui applique le coup, pour laisser le temps à l'animation.
 
-## 10. Bugs & zones floues à trancher avant la réécriture
+## 10. Bugs & zones floues à trancher avant la réécriture — *(archive v1)*
 
 ### Règles ambiguës (décider : bug ou règle ?)
 
@@ -205,6 +213,24 @@ l'équilibre en changeant l'habillage (vérifié par un test sur 520 000 tirages
 | 0 | 1 / 52 | le roi de cœur |
 | 13 | 3 / 52 | les trois autres rois |
 | 1 à 12 | 4 / 52 chacune | les quatre familles |
+
+## La correction majeure : on joue à l'aveugle
+
+La v1 faisait **piocher d'abord**, puis choisir quoi faire de la carte révélée. C'est
+exactement l'inverse du jeu de table : **tout l'intérêt est de s'engager sans connaître sa
+carte**. Un code qui ne fait que retranscrire un comportement ne peut pas distinguer un
+choix de conception d'une erreur — celle-ci n'a été vue qu'en jouant.
+
+Conséquences, en cascade :
+
+- **Il n'existe plus d'action « piocher ».** Chaque coup tire sa propre carte en se résolvant.
+- **Plus personne ne détient de carte.** `drawn` disparaît de l'état des joueurs, du schéma
+  réseau et du client.
+- **Le super-pouvoir n'est plus une alternative à la pioche**, mais un coup parmi les autres.
+- **La charge redevient simplement secrète.** Comme aucune carte n'est détenue, il n'y a plus
+  rien à cacher en amont : la charge se pose sans révélation, et c'est tout.
+- **Les parties s'allongent d'environ 40 %** (8 tours à 2 joueurs, 23 à 4, 50 à 8), et les
+  sièges restent équitables à ±0,5 point.
 
 ## Règles conservées à l'identique
 

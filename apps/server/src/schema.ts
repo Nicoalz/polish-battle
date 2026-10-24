@@ -7,8 +7,9 @@ import { schema, type SchemaType } from '@colyseus/schema'
  * est la seule frontière entre les deux, pour que les règles restent testables sans
  * serveur et que la synchro binaire reste un détail de transport.
  *
- * Tout est public : ce jeu n'a pas de main cachée. La carte piochée est visible de
- * toute la table, ce qui permet à chacun de suivre l'animation de retournement.
+ * Personne ne garde de carte en main : un coup se choisit à l'aveugle et tire sa propre
+ * carte au moment de se résoudre. Le seul secret de la table est la charge, dont la
+ * valeur ne quitte jamais le serveur.
  */
 
 export const CardSchema = schema(
@@ -28,9 +29,8 @@ export const PlayerSchema = schema(
     seat: 'uint8',
     life: [CardSchema],
     shield: CardSchema,
-    // Absentes la plupart du temps : la référence reste simplement indéfinie.
+    // Absente la plupart du temps : la référence reste simplement indéfinie.
     battery: CardSchema,
-    drawn: CardSchema,
     hasSuperPower: 'boolean',
     connected: 'boolean',
     isHost: 'boolean',

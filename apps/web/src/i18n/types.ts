@@ -44,7 +44,8 @@ export type Dict = {
     readonly skipTurn: string
     readonly kick: string
     readonly yourTurn: string
-    readonly drawCard: string
+    readonly chooseAction: string
+    readonly chooseTarget: (action: string) => string
     readonly log: string
     readonly reducedMotion: string
     readonly host: string
@@ -55,7 +56,6 @@ export type Dict = {
     readonly shield: string
     readonly life: string
     readonly battery: string
-    readonly drawn: string
     readonly cursedCard: string
   }
 

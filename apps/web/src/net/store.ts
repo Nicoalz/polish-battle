@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { Client, type Room } from 'colyseus.js'
-import type { Action, Card, GameEvent, GameState } from '@pb/engine'
+import type { Action, GameEvent, GameState } from '@pb/engine'
 import { fromWire, type WireGame } from '@pb/engine'
 import { getPlayerId, saveName } from './identity'
 import { dict, type RejectionCode } from '../i18n'
@@ -56,8 +56,6 @@ type Store = {
    * déjà sa nouvelle valeur pendant que la carte d'attaque est encore en vol.
    */
   display?: GameState
-  /** Ma carte piochée, reçue par un canal privé : les autres ne la voient pas. */
-  hand?: Card
   /** Lots d'événements en attente d'être joués, un lot par action. */
   queue: Batch[]
   /** Vrai tant qu'une mise en scène est en cours. */
@@ -91,25 +89,10 @@ function wait(ms: number): Promise<void> {
 }
 
 export const useGame = create<Store>((set, get) => {
-  /**
-   * Reconstruit l'état de jeu à partir du dernier instantané reçu.
-   *
-   * La carte piochée arrive masquée dans l'état partagé — personne d'autre ne doit la
-   * connaître — et son propriétaire la reçoit à part. C'est ici que les deux se
-   * rejoignent, pour que le reste de l'application n'ait affaire qu'à un état complet.
-   */
-  const build = (raw: WireGame): GameState => {
-    const state = fromWire(raw)
-    const { playerId, hand } = get()
-    const mine = state.players.find((player) => player.id === playerId)
-    if (hand && mine?.drawn) mine.drawn = hand
-    return state
-  }
-
   /** Recalcule l'état autoritaire, et l'affichage avec lui s'il n'y a plus rien à raconter. */
   const refresh = (): void => {
     if (!latestRaw) return
-    const next = build(latestRaw)
+    const next = fromWire(latestRaw)
     const { playedVersion, animating, queue } = get()
     const settled = latestRaw.version === playedVersion && !animating && queue.length === 0
     set(settled ? { game: next, display: next } : { game: next })
@@ -121,12 +104,6 @@ export const useGame = create<Store>((set, get) => {
     joined.onStateChange((state) => {
       latestRaw = (state as unknown as { toJSON(): WireGame }).toJSON()
       set({ version: latestRaw.version })
-      refresh()
-    })
-
-    // Canal privé : ma propre pioche, que le serveur n'envoie qu'à moi.
-    joined.onMessage('hand', (card: Card | null) => {
-      set({ hand: card ?? undefined })
       refresh()
     })
 
@@ -229,7 +206,6 @@ export const useGame = create<Store>((set, get) => {
         status: 'idle',
         game: undefined,
         display: undefined,
-        hand: undefined,
         queue: [],
         version: 0,
         playedVersion: 0,
@@ -265,7 +241,7 @@ export const useGame = create<Store>((set, get) => {
      */
     commit(version) {
       if (!latestRaw || latestRaw.version < version) return
-      set({ display: build(latestRaw), playedVersion: version })
+      set({ display: fromWire(latestRaw), playedVersion: version })
     },
 
     setAnimating(animating) {

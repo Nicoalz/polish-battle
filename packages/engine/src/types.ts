@@ -26,8 +26,6 @@ export type PlayerState = {
   life: Card[]
   shield: Card
   battery?: Card
-  /** Carte piochée en attente d'être jouée. */
-  drawn?: Card
   hasSuperPower: boolean
   connected: boolean
   isHost: boolean
@@ -44,8 +42,14 @@ export type GameState = {
   cardSeq: number
 }
 
+/**
+ * Un coup se choisit **avant** de connaître la carte.
+ *
+ * C'est le cœur du jeu : on s'engage sur une action et une cible, puis seulement la
+ * carte se révèle. Attaquer, c'est parier ; changer un bouclier aussi, dans les deux
+ * sens. Il n'existe donc pas d'action « piocher » : chaque coup tire sa propre carte.
+ */
 export type Action =
-  | { type: 'draw' }
   | { type: 'attack'; targetId: string }
   | { type: 'shield'; targetId: string }
   | { type: 'charge'; targetId: string }
@@ -64,6 +68,7 @@ export type ActionType = Action['type']
  */
 export type GameEvent =
   | { t: 'game-started' }
+  /** La carte se dévoile, une fois le coup engagé. Une charge, elle, ne révèle rien. */
   | { t: 'drawn'; playerId: string; card: Card }
   | {
       t: 'attack-resolved'

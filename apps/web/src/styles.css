@@ -11,6 +11,20 @@ body {
   font-family: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
 }
 
+/*
+ * Tailwind 4 ne remet plus `cursor: pointer` sur les boutons dans son préambule :
+ * on le rétablit ici, une fois, plutôt que d'ajouter une classe à chaque bouton.
+ */
+button:not(:disabled),
+label:has(> input[type='range']),
+[role='button']:not([aria-disabled='true']) {
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: not-allowed;
+}
+
 /* Éclair d'impact : une seule couche, relancée à chaque choc via sa clé React. */
 @keyframes pb-flash {
   from {

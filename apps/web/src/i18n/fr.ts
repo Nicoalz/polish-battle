@@ -29,7 +29,8 @@ export const fr: Dict = {
     skipTurn: 'Passer le tour',
     kick: 'exclure',
     yourTurn: 'À toi de jouer',
-    drawCard: 'Piocher une carte',
+    chooseAction: 'À toi de jouer — choisis ton coup, la carte se révèle ensuite',
+    chooseTarget: (action: string) => `${action} qui ?`,
     log: 'Journal',
     reducedMotion: 'Animations réduites',
     host: 'hôte',
@@ -40,7 +41,6 @@ export const fr: Dict = {
     shield: 'bouclier',
     life: 'vie',
     battery: 'batterie',
-    drawn: 'piochée',
     cursedCard: 'la carte maudite : elle vaut 0 dans tous ses rôles',
   },
 
@@ -54,7 +54,6 @@ export const fr: Dict = {
   },
 
   actions: {
-    draw: 'Piocher',
     attack: 'Attaquer',
     shield: 'Changer le bouclier de',
     charge: 'Charger',

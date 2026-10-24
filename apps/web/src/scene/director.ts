@@ -4,7 +4,7 @@ import { useGame, type Batch } from '../net/store'
 import { useSettings } from '../settings'
 import { playSfx, vibrate, type Sfx } from '../audio/synth'
 import { useStage } from './stage'
-import { DRAWN_CARD_POSITION, seatAnchor } from './seats'
+import { DECK_POSITION, DRAWN_CARD_POSITION, seatAnchor } from './seats'
 
 /**
  * Chef d'orchestre des animations.
@@ -16,7 +16,8 @@ import { DRAWN_CARD_POSITION, seatAnchor } from './seats'
  */
 
 const DURATIONS = {
-  draw: 620,
+  /** Temps laissé à la table pour lire la carte qui vient de se dévoiler. */
+  reveal: 820,
   place: 460,
   attack: 520,
   superWindup: 420,
@@ -76,6 +77,7 @@ export function useDirector(mySeat: number, total: number): void {
         // rattrape l'état autoritaire et la main est rendue.
         stage.focus(undefined)
         stage.setFlight(undefined)
+        stage.setReveal(undefined)
         // Rattrapage de sécurité : on valide la dernière version effectivement reçue.
         commit(useGame.getState().version)
         setAnimating(false)
@@ -122,16 +124,8 @@ async function play(batch: Batch, mySeat: number, total: number): Promise<void> 
   const superUsed = events.find((event) => event.t === 'super-used')
   const shield = events.find((event) => event.t === 'shield-set')
   const charge = events.find((event) => event.t === 'battery-set')
+  const drawn = events.find((event) => event.t === 'drawn')
   const won = events.find((event) => event.t === 'game-won')
-
-  // Piocher : la carte surgit du paquet. L'animation d'entrée est portée par la carte
-  // elle-même, il suffit de la laisser respirer.
-  if (events.some((event) => event.t === 'drawn')) {
-    sound('draw')
-    await commit()
-    await hold(DURATIONS.draw)
-    return
-  }
 
   if (superUsed) {
     sound('super')
@@ -141,20 +135,23 @@ async function play(batch: Batch, mySeat: number, total: number): Promise<void> 
     }
   }
 
+  // Le coup était engagé à l'aveugle : c'est seulement maintenant que la carte se
+  // montre, et toute la table la découvre en même temps que son auteur.
+  if (drawn) {
+    stage.setReveal(drawn.card)
+    sound('draw')
+    await hold(DURATIONS.reveal)
+  }
+
   if (attack) {
-    const fromSeat = seatOf(before, attack.fromId)
     const toSeat = seatOf(before, attack.toId)
     const duration = attack.kind === 'super' ? DURATIONS.superFlight : DURATIONS.attack
 
     if (toSeat !== undefined) {
+      stage.setReveal(undefined)
       stage.setFlight({
         cards: attack.cards,
-        // Une attaque normale part de la carte posée au centre ; un super-pouvoir tire
-        // sa carte de nulle part, donc du siège de son auteur.
-        from:
-          attack.kind === 'super' && fromSeat !== undefined
-            ? seatAnchor(fromSeat, mySeat, total, 1.3)
-            : DRAWN_CARD_POSITION,
+        from: DRAWN_CARD_POSITION,
         to: seatAnchor(toSeat, mySeat, total, 0.7),
         kind: 'attack',
         startedAt: performance.now(),
@@ -179,15 +176,18 @@ async function play(batch: Batch, mySeat: number, total: number): Promise<void> 
     const target = shield ?? charge
     const toSeat = target ? seatOf(before, target.playerId) : undefined
     if (toSeat !== undefined && target) {
+      stage.setReveal(undefined)
       stage.setFlight({
         cards: [target.card],
-        from: DRAWN_CARD_POSITION,
+        // Un bouclier part du centre, où il vient d'être montré ; une charge sort
+        // directement du paquet, sans jamais s'être dévoilée.
+        from: shield ? DRAWN_CARD_POSITION : DECK_POSITION,
         to: seatAnchor(toSeat, mySeat, total, 0.7),
         kind: 'place',
         startedAt: performance.now(),
         duration: DURATIONS.place * scale,
       })
-      sound(target.t === 'battery-set' ? 'charge' : 'place')
+      sound(shield ? 'place' : 'charge')
       await hold(DURATIONS.place)
       stage.setFlight(undefined)
     }
@@ -198,6 +198,7 @@ async function play(batch: Batch, mySeat: number, total: number): Promise<void> 
     await hold(DURATIONS.settle * 0.6)
   }
 
+  stage.setReveal(undefined)
   stage.focus(undefined)
 
   if (won) {

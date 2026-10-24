@@ -70,8 +70,9 @@ export function deadPlayers(state: GameState): PlayerState[] {
  *
  * Autorité unique : le serveur refuse ce qui n'y figure pas, et le client grise ses
  * boutons à partir de la même liste. Une seule définition de ce qui est jouable, donc
- * aucune divergence possible entre les deux (c'est ce qui produisait, en v1, la charge
- * refusée qui laissait le joueur bloqué avec sa carte).
+ * aucune divergence possible entre les deux.
+ *
+ * La liste ne dépend jamais d'une carte : on choisit son coup sans la connaître.
  */
 export function legalActions(state: GameState, playerId: string): Action[] {
   if (state.phase !== 'playing') return []
@@ -80,22 +81,16 @@ export function legalActions(state: GameState, playerId: string): Action[] {
   if (!player || player.seat !== state.turnSeat || !isAlive(player)) return []
 
   const alive = alivePlayers(state)
+  const actions: Action[] = [
+    ...alive.map((target): Action => ({ type: 'attack', targetId: target.id })),
+    ...alive.map((target): Action => ({ type: 'shield', targetId: target.id })),
+    // Une cible qui porte déjà une charge n'est pas proposée : l'action n'aurait
+    // aucun effet et gâcherait le tour.
+    ...alive
+      .filter((target) => !target.battery)
+      .map((target): Action => ({ type: 'charge', targetId: target.id })),
+  ]
 
-  if (player.drawn) {
-    return [
-      ...alive.map((target): Action => ({ type: 'attack', targetId: target.id })),
-      ...alive.map((target): Action => ({ type: 'shield', targetId: target.id })),
-      // Une cible qui porte déjà une batterie n'est pas sélectionnable : en v1 l'action
-      // partait, échouait en silence et le tour ne passait jamais.
-      ...alive
-        .filter((target) => !target.battery)
-        .map((target): Action => ({ type: 'charge', targetId: target.id })),
-    ]
-  }
-
-  const actions: Action[] = [{ type: 'draw' }]
-
-  // Le super-pouvoir est inaccessible une fois la carte piochée : piocher, c'est y renoncer.
   if (player.hasSuperPower) {
     for (const target of alive) {
       actions.push({ type: 'super-attack', targetId: target.id })
@@ -130,7 +125,6 @@ function dealPlayer(state: GameState, player: PlayerState): void {
   player.life = drawLifeCards(state, INITIAL_LIFE_CARDS)
   player.shield = drawCard(state)
   player.battery = undefined
-  player.drawn = undefined
   player.hasSuperPower = true
 }
 
@@ -385,28 +379,21 @@ export function applyAction(state: GameState, playerId: string, action: Action):
     'targetId' in action ? findPlayer(next, action.targetId)! : undefined
 
   switch (action.type) {
-    case 'draw': {
-      const card = drawCard(next)
-      player.drawn = card
-      events.push({ t: 'drawn', playerId, card })
-      // Piocher ne termine pas le tour : le joueur doit encore jouer sa carte.
-      return { state: next, events }
-    }
-
     case 'attack': {
-      const drawn = player.drawn!
+      // La carte se tire maintenant, le coup étant déjà engagé.
+      const drawn = drawCard(next)
       const battery = player.battery
       const raw = drawn.value + (battery?.value ?? 0)
-      player.drawn = undefined
+      events.push({ t: 'drawn', playerId, card: drawn })
       resolveAttack(player, target!, battery ? [drawn, battery] : [drawn], raw, 'normal', events)
       spendBattery(player, events)
       break
     }
 
     case 'shield': {
-      const drawn = player.drawn!
-      player.drawn = undefined
+      const drawn = drawCard(next)
       target!.shield = drawn
+      events.push({ t: 'drawn', playerId, card: drawn })
       events.push({
         t: 'shield-set',
         playerId: target!.id,
@@ -418,8 +405,8 @@ export function applyAction(state: GameState, playerId: string, action: Action):
     }
 
     case 'charge': {
-      const drawn = player.drawn!
-      player.drawn = undefined
+      // Aucun événement de révélation : une charge se pose sans jamais se montrer.
+      const drawn = drawCard(next)
       target!.battery = drawn
       events.push({ t: 'battery-set', playerId: target!.id, byId: playerId, card: drawn })
       break
@@ -431,6 +418,7 @@ export function applyAction(state: GameState, playerId: string, action: Action):
       const raw = card.value + (battery?.value ?? 0)
       player.hasSuperPower = false
       events.push({ t: 'super-used', playerId, kind: 'super-attack' })
+      events.push({ t: 'drawn', playerId, card })
       resolveAttack(player, target!, battery ? [card, battery] : [card], raw, 'super', events)
       // La super-attaque vide la batterie de la cible quoi qu'il arrive, même si aucune
       // carte de vie n'a été détruite.
@@ -448,6 +436,7 @@ export function applyAction(state: GameState, playerId: string, action: Action):
       player.hasSuperPower = false
       target!.shield = card
       events.push({ t: 'super-used', playerId, kind: 'super-shield' })
+      events.push({ t: 'drawn', playerId, card })
       events.push({
         t: 'shield-set',
         playerId: target!.id,
@@ -483,8 +472,6 @@ export function skipTurn(state: GameState): ApplyResult {
 
   const next = structuredClone(state)
   const events: GameEvent[] = []
-  const player = currentPlayer(next)
-  if (player) player.drawn = undefined
   finalizeTurn(next, new Set(alivePlayers(next).map((p) => p.id)), events)
   return { state: next, events }
 }

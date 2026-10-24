@@ -18,7 +18,6 @@ export type WirePlayer = {
   life: WireCard[]
   shield: WireCard
   battery?: WireCard
-  drawn?: WireCard
   hasSuperPower: boolean
   connected: boolean
   isHost: boolean
@@ -34,14 +33,14 @@ export type WireGame = {
 }
 
 /** Emplacements dont la carte est remplacée par un jeton avant d'être transmise. */
-export type HiddenSlot = 'drawn' | 'battery'
+export type HiddenSlot = 'battery'
 
 /**
  * Identifiant d'une carte masquée.
  *
  * Il désigne un emplacement, jamais une carte : réutiliser l'identifiant réel
- * permettrait de recouper une charge avec la pioche qui l'a produite, et d'en déduire
- * la valeur que l'on prétend cacher. Serveur et client partagent cette convention.
+ * laisserait recouper la charge avec un autre événement. Serveur et client partagent
+ * cette convention.
  */
 export function hiddenCardId(slot: HiddenSlot, playerId: string): string {
   return `${slot}:${playerId}`
@@ -52,7 +51,7 @@ export function hiddenCard(slot: HiddenSlot, playerId: string): Card {
 }
 
 export function isHiddenCard(card: Pick<Card, 'id'>): boolean {
-  return card.id.startsWith('drawn:') || card.id.startsWith('battery:')
+  return card.id.startsWith('battery:')
 }
 
 function toCard(card: WireCard): Card {
@@ -67,7 +66,6 @@ function toPlayer(player: WirePlayer): PlayerState {
     life: (player.life ?? []).map(toCard),
     shield: toCard(player.shield),
     battery: player.battery ? toCard(player.battery) : undefined,
-    drawn: player.drawn ? toCard(player.drawn) : undefined,
     hasSuperPower: player.hasSuperPower,
     connected: player.connected,
     isHost: player.isHost,

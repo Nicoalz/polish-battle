@@ -29,7 +29,8 @@ export const en: Dict = {
     skipTurn: 'Skip turn',
     kick: 'kick',
     yourTurn: 'Your move',
-    drawCard: 'Draw a card',
+    chooseAction: 'Your move — commit first, the card shows after',
+    chooseTarget: (action: string) => `${action} who?`,
     log: 'Log',
     reducedMotion: 'Reduced motion',
     host: 'host',
@@ -40,7 +41,6 @@ export const en: Dict = {
     shield: 'shield',
     life: 'life',
     battery: 'battery',
-    drawn: 'drawn',
     cursedCard: 'the cursed card: worth 0 in every role',
   },
 
@@ -54,7 +54,6 @@ export const en: Dict = {
   },
 
   actions: {
-    draw: 'Draw',
     attack: 'Attack',
     shield: 'Replace the shield of',
     charge: 'Charge',

@@ -2,7 +2,7 @@ import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { AdaptiveDpr, ContactShadows, PerformanceMonitor } from '@react-three/drei'
 import { useState } from 'react'
 import type { GameState } from '@pb/engine'
-import { isAlive, isHiddenCard } from '@pb/engine'
+import { isAlive } from '@pb/engine'
 import { PlayerSeat } from './PlayerSeat'
 import { Card3D } from './Card3D'
 import { Particles } from './Particles'
@@ -36,30 +36,19 @@ function Deck() {
 }
 
 /**
- * La carte piochée, suspendue au-dessus du paquet.
+ * La carte dévoilée, suspendue au-dessus du paquet.
  *
- * Elle est rendue au centre plutôt qu'au siège de son propriétaire : c'est de là
- * qu'elle sort, elle ne recouvre donc jamais les cartes d'un joueur, et elle reste
- * lisible de toute la table. Un seul joueur peut en avoir une à la fois.
+ * Elle n'appartient à personne : un coup se joue à l'aveugle, et la carte n'apparaît
+ * qu'au moment de se résoudre, le temps d'être vue par toute la table. Elle vient donc
+ * de la mise en scène, pas de l'état de jeu.
  */
-function DrawnCard({ game }: { game: GameState }) {
-  const flight = useStage((state) => state.flight)
-  const holder = game.players.find((player) => player.drawn)
-  if (!holder?.drawn) return null
-  // Pendant un vol, c'est cette carte-là qui est en l'air : la laisser aussi au centre
-  // la dédoublerait.
-  if (flight) return null
+function RevealedCard() {
+  const reveal = useStage((state) => state.reveal)
+  if (!reveal) return null
 
-  // Chacun ne voit que sa propre pioche : pour les autres, le serveur n'a envoyé qu'un
-  // jeton, et la carte reste retournée jusqu'à ce qu'elle soit jouée.
   return (
-    <DrawnCardEntry key={holder.drawn.id}>
-      <Card3D
-        card={holder.drawn}
-        role="drawn"
-        faceDown={isHiddenCard(holder.drawn)}
-        scale={1.5}
-      />
+    <DrawnCardEntry key={reveal.id}>
+      <Card3D card={reveal} role="drawn" scale={1.5} />
     </DrawnCardEntry>
   )
 }
@@ -146,7 +135,7 @@ export function GameScene({ game, mySeat, compact, selectableIds, onSelectTarget
       <Lights accent={accent} />
       <Table />
       <Deck />
-      <DrawnCard game={game} />
+      <RevealedCard />
       <Projectile />
       {!degraded && <Particles color={accent} />}
 

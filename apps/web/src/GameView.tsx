@@ -14,7 +14,6 @@ import { isAlive } from '@pb/engine'
 
 /** Ordre d'affichage des actions : les courantes d'abord, les super-pouvoirs ensuite. */
 const ACTION_ORDER: ActionType[] = [
-  'draw',
   'attack',
   'shield',
   'charge',
@@ -59,7 +58,7 @@ export function GameView({ game, display }: { game: GameState; display: GameStat
   )
 
   const selectableIds = useMemo(() => {
-    if (!pending || pending === 'draw') return new Set<string>()
+    if (!pending) return new Set<string>()
     return new Set(
       actions
         .filter((action) => action.type === pending && 'targetId' in action)
@@ -72,16 +71,11 @@ export function GameView({ game, display }: { game: GameState; display: GameStat
   const accent = seatColor(display.turnSeat)
 
   const choose = (type: ActionType) => {
-    if (type === 'draw') {
-      send({ type: 'draw' })
-      setPending(null)
-      return
-    }
     setPending((value) => (value === type ? null : type))
   }
 
   const selectTarget = (targetId: string) => {
-    if (!pending || pending === 'draw') return
+    if (!pending) return
     send({ type: pending, targetId } as never)
     setPending(null)
   }
@@ -132,7 +126,7 @@ export function GameView({ game, display }: { game: GameState; display: GameStat
         {/* `backdrop-blur` crée un contexte d'empilement : sans z-index sur ce
             conteneur, le panneau de réglages passerait sous ses voisins. */}
         <div className="pointer-events-auto relative z-40 flex items-center gap-2 rounded-full bg-black/45 px-3 py-1.5 backdrop-blur-sm">
-          <span className="font-mono text-sm tracking-widest">{code}</span>
+          <span className="font-mono text-sm tracking-widest text-slate-100">{code}</span>
           <SettingsMenu />
           <button className="text-xs text-slate-400 underline" onClick={() => void leave()}>
             {t.table.leave}
@@ -189,28 +183,26 @@ export function GameView({ game, display }: { game: GameState; display: GameStat
       {/* ------------------------------ barre d'action ------------------------------ */}
       {types.length > 0 && (
         <div className="absolute inset-x-0 bottom-0 z-30 flex flex-col items-center gap-2 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:p-4">
-          {pending && pending !== 'draw' && (
-            <p className="rounded-full bg-black/60 px-4 py-1.5 text-sm backdrop-blur-sm">
-              {t.actions[pending]} — <span className="opacity-70">{t.table.yourTurn}</span>
-            </p>
-          )}
+          <p className="rounded-full bg-black/70 px-4 py-1.5 text-sm">
+            {pending ? t.table.chooseTarget(t.actions[pending]) : t.table.chooseAction}
+          </p>
           <div className="flex max-w-full flex-wrap justify-center gap-2">
             {types.map((type) => (
               <button
                 key={type}
                 onClick={() => choose(type)}
-                className={`rounded-full px-3 py-2 text-xs font-semibold backdrop-blur-sm transition sm:px-4 sm:text-sm ${
+                className={`rounded-full border px-3 py-2 text-xs font-semibold transition sm:px-4 sm:text-sm ${
                   pending === type
-                    ? 'bg-emerald-400 text-slate-900'
-                    : 'bg-black/55 hover:bg-black/75'
+                    ? 'border-emerald-200 bg-emerald-400 text-slate-900 shadow-lg shadow-emerald-500/30'
+                    : 'border-white/25 bg-white/15 text-white hover:border-white/50 hover:bg-white/25'
                 }`}
               >
-                {type === 'draw' ? t.table.drawCard : t.actions[type]}
+                {t.actions[type]}
               </button>
             ))}
             {pending && (
               <button
-                className="rounded-full bg-black/40 px-4 py-2 text-sm text-slate-300"
+                className="rounded-full border border-white/20 bg-white/10 px-4 py-2 text-sm text-slate-200 hover:bg-white/20"
                 onClick={() => setPending(null)}
               >
                 ✕
@@ -224,7 +216,7 @@ export function GameView({ game, display }: { game: GameState; display: GameStat
       {/* Décalés vers le haut sur mobile : la barre d'action occupe déjà le bas. */}
       <div className="absolute bottom-28 left-2 z-30 max-w-[16rem] sm:bottom-3 sm:left-3 sm:max-w-[22rem]">
         <button
-          className="rounded-full bg-black/45 px-3 py-1 text-xs text-slate-300 backdrop-blur-sm"
+          className="rounded-full border border-white/20 bg-white/10 px-3 py-1 text-xs text-slate-200 hover:bg-white/20"
           onClick={() => setShowLog((value) => !value)}
         >
           {t.table.log} {showLog ? '▾' : '▸'}
@@ -270,6 +262,6 @@ export function GameView({ game, display }: { game: GameState; display: GameStat
 }
 
 const BTN =
-  'rounded-full bg-emerald-500 px-4 py-1.5 text-sm font-semibold text-slate-900 hover:bg-emerald-400 disabled:opacity-40'
+  'rounded-full bg-emerald-400 px-4 py-1.5 text-sm font-semibold text-slate-900 transition hover:bg-emerald-300 disabled:opacity-40'
 const BTN_GHOST =
-  'rounded-full bg-black/45 px-4 py-1.5 text-sm backdrop-blur-sm hover:bg-black/70'
+  'rounded-full border border-white/25 bg-white/15 px-4 py-1.5 text-sm font-medium text-white transition hover:border-white/50 hover:bg-white/25'

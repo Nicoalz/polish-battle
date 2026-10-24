@@ -30,7 +30,7 @@ function makeCard(card: Card): CardSchema {
  */
 function assignOptionalCard(
   owner: PlayerSchema,
-  field: 'battery' | 'drawn',
+  field: 'battery',
   card: Card | undefined,
 ): void {
   const current = owner[field] as CardSchema | undefined
@@ -51,8 +51,8 @@ function syncCards(list: CardSchema[], cards: Card[]): void {
   })
 }
 
-function hide(slot: 'drawn' | 'battery', card: Card | undefined, playerId: string) {
-  return card ? hiddenCard(slot, playerId) : undefined
+function hide(card: Card | undefined, playerId: string) {
+  return card ? hiddenCard('battery', playerId) : undefined
 }
 
 function syncPlayer(node: PlayerSchema, player: PlayerState): void {
@@ -72,13 +72,9 @@ function syncPlayer(node: PlayerSchema, player: PlayerState): void {
   if (shield) writeCard(shield, player.shield)
   else node.shield = makeCard(player.shield)
 
-  // Ni la charge ni la carte piochée ne circulent en clair dans l'état partagé.
-  // La pioche est privée — son propriétaire la reçoit par un message qui n'est adressé
-  // qu'à lui — et la charge reste cachée de tous, y compris de son porteur, puisque
-  // c'est ainsi qu'elle est montrée. L'une comme l'autre se révèlent d'elles-mêmes au
-  // moment d'être jouées : l'attaque et le bouclier transportent la carte entière.
-  assignOptionalCard(node, 'battery', hide('battery', player.battery, player.id))
-  assignOptionalCard(node, 'drawn', hide('drawn', player.drawn, player.id))
+  // La charge ne circule pas en clair : elle est posée face cachée et le reste jusqu'à
+  // sa dépense, où l'événement d'attaque transporte enfin la carte entière.
+  assignOptionalCard(node, 'battery', hide(player.battery, player.id))
 }
 
 export function syncState(target: GameSchema, source: GameState): void {

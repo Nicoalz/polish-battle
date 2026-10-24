@@ -6,14 +6,20 @@ import type { Action, GameState, PlayerState } from './types'
  * Politique de jeu simple et non dégénérée.
  *
  * Elle sert au simulateur d'équilibrage et constitue la base d'éventuels bots jouables.
- * Elle ne cherche pas à bien jouer, seulement à jouer de façon plausible : taper qui
- * fait le plus mal, se protéger quand on est à découvert, charger quand la carte est
- * trop belle pour être dépensée tout de suite.
+ * Comme un joueur humain, elle décide **sans connaître sa carte** : elle ne peut que
+ * miser sur ce qu'un tirage vaut en moyenne.
  *
- * Les égalités sont tranchées **au hasard** et non par ordre de siège : départager
- * toujours dans le même sens ferait d'un détail d'implémentation un biais de position,
- * et fausserait précisément ce que le simulateur cherche à mesurer.
+ * Les égalités sont tranchées au hasard et non par ordre de siège : départager toujours
+ * dans le même sens ferait d'un détail d'implémentation un biais de position, et
+ * fausserait précisément ce que le simulateur cherche à mesurer.
  */
+
+/**
+ * Valeur moyenne d'un tirage : 0 une fois sur 52, 13 trois fois, et 1 à 12 quatre fois
+ * chacune, soit 351/52.
+ */
+export const EXPECTED_CARD = 6.75
+
 export function chooseAction(
   state: GameState,
   playerId: string,
@@ -29,35 +35,9 @@ export function chooseAction(
   const pick = (action: Action | undefined): Action | undefined =>
     action && actions.some((a) => sameAction(a, action)) ? action : undefined
 
-  if (me.drawn) {
-    const power = me.drawn.value + (me.battery?.value ?? 0)
-    const best = bestTarget(opponents, power, random)
-
-    // À découvert avec une carte solide : on se blinde plutôt que de taper dans le vide.
-    if (me.shield.value <= 2 && me.drawn.value >= 8) {
-      const shieldSelf = pick({ type: 'shield', targetId: playerId })
-      if (shieldSelf) return shieldSelf
-    }
-    // Carte trop précieuse pour être dépensée seule : on la met de côté.
-    if (!me.battery && me.drawn.value >= 10) {
-      const chargeSelf = pick({ type: 'charge', targetId: playerId })
-      if (chargeSelf) return chargeSelf
-    }
-    if (best && best.dealt > 0) {
-      const attack = pick({ type: 'attack', targetId: best.player.id })
-      if (attack) return attack
-    }
-    // Aucune attaque ne passe : on renforce son propre bouclier.
-    const fallback =
-      pick({ type: 'shield', targetId: playerId }) ??
-      pick({ type: 'charge', targetId: playerId }) ??
-      (best ? pick({ type: 'attack', targetId: best.player.id }) : undefined)
-    if (fallback) return fallback
-    return actions[0]
-  }
-
   if (me.hasSuperPower) {
-    // Coup de grâce : la super-attaque garantit au moins 8.
+    // Coup de grâce : la super-attaque garantit au moins 8, c'est le seul coup dont on
+    // connaisse le plancher à l'avance.
     const finishers = opponents.filter(
       (opponent) =>
         8 + (me.battery?.value ?? 0) - opponent.shield.value >= totalValue(opponent.life),
@@ -67,17 +47,37 @@ export function chooseAction(
       const superAttack = pick({ type: 'super-attack', targetId: finisher.id })
       if (superAttack) return superAttack
     }
-    // Dos au mur et sans bouclier : on se blinde.
+    // Dos au mur et sans bouclier : on prend le seul bouclier dont la valeur est sûre.
     if (me.shield.value <= 1 && totalValue(me.life) <= 6) {
       const superShield = pick({ type: 'super-shield', targetId: playerId })
       if (superShield) return superShield
     }
   }
 
-  return pick({ type: 'draw' }) ?? actions[0]
+  const power = EXPECTED_CARD + (me.battery?.value ?? 0)
+  const best = bestTarget(opponents, power, random)
+
+  // À découvert : un bouclier tiré au hasard vaut en moyenne mieux que celui qu'on a.
+  if (me.shield.value + 2 < EXPECTED_CARD) {
+    const shieldSelf = pick({ type: 'shield', targetId: playerId })
+    if (shieldSelf) return shieldSelf
+  }
+
+  // Taper ne mènerait à rien : on capitalise plutôt sur le tour suivant.
+  if (!me.battery && (!best || best.dealt <= 0)) {
+    const chargeSelf = pick({ type: 'charge', targetId: playerId })
+    if (chargeSelf) return chargeSelf
+  }
+
+  if (best) {
+    const attack = pick({ type: 'attack', targetId: best.player.id })
+    if (attack) return attack
+  }
+
+  return pick({ type: 'shield', targetId: playerId }) ?? actions[0]
 }
 
-/** Meilleure cible : dégâts les plus élevés, puis la plus proche de l'élimination. */
+/** Meilleure cible : dégâts espérés les plus élevés, puis la plus proche de l'élimination. */
 function bestTarget(
   opponents: PlayerState[],
   power: number,

@@ -90,14 +90,17 @@ export default function App() {
       </label>
 
       <button
-        className="rounded bg-emerald-500 px-4 py-2 font-semibold text-slate-900 hover:bg-emerald-400 disabled:opacity-40"
+        className="rounded-lg bg-emerald-400 px-4 py-2.5 font-semibold text-slate-900 transition hover:bg-emerald-300 disabled:opacity-40"
         disabled={status === 'connecting' || !name.trim() || !code.trim()}
         onClick={() => join(code)}
       >
         {status === 'connecting' ? t.lobby.joining : t.lobby.join}
       </button>
 
-      <button className="text-sm text-slate-400 underline" onClick={() => join(randomCode())}>
+      <button
+        className="text-sm text-slate-300 underline transition hover:text-white"
+        onClick={() => join(randomCode())}
+      >
         {t.lobby.createRoom}
       </button>
 
@@ -106,7 +109,8 @@ export default function App() {
   )
 }
 
-const INPUT = 'rounded border border-white/20 bg-black/30 px-3 py-2 outline-none focus:border-emerald-400'
+const INPUT =
+  'rounded-lg border border-white/25 bg-white/5 px-3 py-2.5 outline-none transition focus:border-emerald-400 focus:bg-white/10'
 
 function Splash({ label }: { label: string }) {
   return (

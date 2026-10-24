@@ -35,7 +35,7 @@ export function SettingsMenu() {
   return (
     <div ref={root} className="relative">
       <button
-        className="rounded-full px-2 py-1 text-sm text-slate-300 hover:bg-white/10"
+        className="rounded-full px-2 py-1 text-sm text-slate-200 transition hover:bg-white/15"
         aria-expanded={open}
         aria-label={t.settings.title}
         onClick={() => setOpen((value) => !value)}
@@ -54,8 +54,10 @@ export function SettingsMenu() {
                 key={code}
                 onClick={() => setLocale(code)}
                 aria-pressed={code === locale}
-                className={`flex-1 rounded px-2 py-1 text-xs uppercase ${
-                  code === locale ? 'bg-emerald-500 text-slate-900' : 'bg-white/10 hover:bg-white/20'
+                className={`flex-1 rounded px-2 py-1 text-xs font-semibold uppercase transition ${
+                  code === locale
+                    ? 'bg-emerald-400 text-slate-900'
+                    : 'bg-white/15 text-slate-100 hover:bg-white/25'
                 }`}
               >
                 {code}

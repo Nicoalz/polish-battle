@@ -10,18 +10,18 @@ import {
   skipTurn,
   startGame,
 } from '../src/rules'
-import { card, duel, game, player } from './helpers'
+import { card, drawing, duel, duelDrawing, game, player } from './helpers'
 
 describe('l’ordre du tour (GAME_RULES §4)', () => {
   it('passe au joueur suivant', () => {
-    const state = game([player('a', 0, { drawn: card(1) }), player('b', 1), player('c', 2)])
+    const state = game([player('a', 0), player('b', 1), player('c', 2)])
     const { state: next } = applyAction(state, 'a', { type: 'shield', targetId: 'a' })
     expect(next.turnSeat).toBe(1)
   })
 
   it('saute les joueurs morts', () => {
     const state = game([
-      player('a', 0, { drawn: card(1) }),
+      player('a', 0),
       player('b', 1, { life: [] }),
       player('c', 2),
     ])
@@ -33,7 +33,7 @@ describe('l’ordre du tour (GAME_RULES §4)', () => {
 
   it('reboucle sur le premier siège vivant', () => {
     const state = game(
-      [player('a', 0), player('b', 1), player('c', 2, { drawn: card(1) })],
+      [player('a', 0), player('b', 1), player('c', 2)],
       { turnSeat: 2 },
     )
     const { state: next } = applyAction(state, 'c', { type: 'shield', targetId: 'c' })
@@ -43,10 +43,10 @@ describe('l’ordre du tour (GAME_RULES §4)', () => {
 
 describe('la fin de partie (GAME_RULES §8)', () => {
   const killingBlow = () =>
-    game([
-      player('a', 0, { drawn: card(13), battery: card(13) }),
+    drawing(13, game([
+      player('a', 0, { battery: card(13) }),
       player('b', 1, { life: [card(3)] }),
-    ])
+    ]))
 
   it('désigne un vainqueur dès qu’il ne reste qu’un survivant', () => {
     const { state: next, events } = applyAction(killingBlow(), 'a', {
@@ -72,15 +72,17 @@ describe('la fin de partie (GAME_RULES §8)', () => {
 
   it('verrouille la partie : plus aucune action n’est acceptée', () => {
     const { state: next } = applyAction(killingBlow(), 'a', { type: 'attack', targetId: 'b' })
-    expect(() => applyAction(next, 'a', { type: 'draw' })).toThrow(IllegalActionError)
+    expect(() => applyAction(next, 'a', { type: 'attack', targetId: 'a' })).toThrow(
+      IllegalActionError,
+    )
   })
 
   it('ne boucle pas à l’infini si plus personne n’est vivant', () => {
     // La v1 partait en boucle infinie dans ce cas (bug n°14).
-    const state = game([
-      player('a', 0, { drawn: card(13), life: [card(1)] }),
-      player('b', 1, { life: [card(1)] }),
-    ])
+    const state = drawing(
+      13,
+      game([player('a', 0, { life: [card(1)] }), player('b', 1, { life: [card(1)] })]),
+    )
     const { state: next } = applyAction(state, 'a', { type: 'attack', targetId: 'a' })
 
     expect(next.phase).toBe('finished')
@@ -226,17 +228,14 @@ describe('le siège de départ', () => {
 
 describe('le passage de tour forcé (joueur absent, pouvoir d’hôte)', () => {
   it('passe la main et jette la carte piochée', () => {
-    const state = duel({ drawn: card(9) })
-    const { state: next } = skipTurn(state)
-
-    expect(next.players[0]!.drawn).toBeUndefined()
+    const { state: next } = skipTurn(duel())
     expect(next.turnSeat).toBe(1)
   })
 })
 
 describe('l’immutabilité du moteur', () => {
   it('ne modifie jamais l’état qu’on lui passe', () => {
-    const state = duel({ drawn: card(7) }, { life: [card(9)] })
+    const state = duelDrawing(7, {}, { life: [card(9)] })
     const snapshot = structuredClone(state)
     applyAction(state, 'a', { type: 'attack', targetId: 'b' })
 

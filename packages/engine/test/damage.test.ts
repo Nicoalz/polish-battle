@@ -1,13 +1,10 @@
 import { describe, expect, it } from 'vitest'
 import { applyAction } from '../src/rules'
-import { card, cursed, duel, lifeValues, player, game } from './helpers'
+import { card, cursed, drawing, duelDrawing, lifeValues, player, game } from './helpers'
 
 describe('le calcul des dégâts (GAME_RULES §5 et §6)', () => {
   it('inflige carte + batterie − bouclier', () => {
-    const state = duel(
-      { drawn: card(7), battery: card(4) },
-      { shield: card(3), life: [card(13), card(13)] },
-    )
+    const state = duelDrawing(7, { battery: card(4) }, { shield: card(3), life: [card(13), card(13)] })
     const { state: next, events } = applyAction(state, 'a', { type: 'attack', targetId: 'b' })
 
     const resolved = events.find((e) => e.t === 'attack-resolved')
@@ -16,7 +13,7 @@ describe('le calcul des dégâts (GAME_RULES §5 et §6)', () => {
   })
 
   it('ne fait rien quand le bouclier est supérieur ou égal à l’attaque', () => {
-    const state = duel({ drawn: card(5) }, { shield: card(9), life: [card(10)] })
+    const state = duelDrawing(5, {}, { shield: card(9), life: [card(10)] })
     const { state: next, events } = applyAction(state, 'a', { type: 'attack', targetId: 'b' })
 
     expect(events.find((e) => e.t === 'attack-resolved')).toMatchObject({ dealt: 0 })
@@ -25,7 +22,7 @@ describe('le calcul des dégâts (GAME_RULES §5 et §6)', () => {
   })
 
   it('entame la carte de vie la plus ancienne en premier', () => {
-    const state = duel({ drawn: card(4) }, { life: [card(10), card(2)] })
+    const state = duelDrawing(4, {}, { life: [card(10), card(2)] })
     const { state: next, events } = applyAction(state, 'a', { type: 'attack', targetId: 'b' })
 
     expect(lifeValues(next, 'b')).toEqual([6, 2])
@@ -33,7 +30,7 @@ describe('le calcul des dégâts (GAME_RULES §5 et §6)', () => {
   })
 
   it('déborde sur la carte suivante quand la première est détruite', () => {
-    const state = duel({ drawn: card(13) }, { life: [card(5), card(10)] })
+    const state = duelDrawing(13, {}, { life: [card(5), card(10)] })
     const { state: next, events } = applyAction(state, 'a', { type: 'attack', targetId: 'b' })
 
     expect(lifeValues(next, 'b')).toEqual([2])
@@ -42,11 +39,14 @@ describe('le calcul des dégâts (GAME_RULES §5 et §6)', () => {
   })
 
   it('perd le surplus de dégâts au lieu de le reporter ailleurs', () => {
-    const state = game([
-      player('a', 0, { drawn: card(13), battery: card(13) }),
-      player('b', 1, { life: [card(2)] }),
-      player('c', 2, { life: [card(9)] }),
-    ])
+    const state = drawing(
+      13,
+      game([
+        player('a', 0, { battery: card(13) }),
+        player('b', 1, { life: [card(2)] }),
+        player('c', 2, { life: [card(9)] }),
+      ]),
+    )
     const { state: next } = applyAction(state, 'a', { type: 'attack', targetId: 'b' })
 
     expect(lifeValues(next, 'b')).toEqual([])
@@ -54,7 +54,7 @@ describe('le calcul des dégâts (GAME_RULES §5 et §6)', () => {
   })
 
   it('détruit gratuitement une carte de vie maudite', () => {
-    const state = duel({ drawn: card(1) }, { life: [cursed(), card(8)] })
+    const state = duelDrawing(1, {}, { life: [cursed(), card(8)] })
     const { state: next } = applyAction(state, 'a', { type: 'attack', targetId: 'b' })
 
     // La carte maudite n'absorbe rien : elle saute, et le point de dégât passe derrière.
@@ -64,7 +64,7 @@ describe('le calcul des dégâts (GAME_RULES §5 et §6)', () => {
 
 describe('la batterie de la cible (GAME_RULES §6, commit « fix charge when dmg »)', () => {
   it('saute quand une carte de vie est détruite', () => {
-    const state = duel({ drawn: card(9) }, { life: [card(5), card(5)], battery: card(6) })
+    const state = duelDrawing(9, {}, { life: [card(5), card(5)], battery: card(6) })
     const { state: next, events } = applyAction(state, 'a', { type: 'attack', targetId: 'b' })
 
     expect(next.players[1]!.battery).toBeUndefined()
@@ -72,14 +72,14 @@ describe('la batterie de la cible (GAME_RULES §6, commit « fix charge when dmg
   })
 
   it('survit à un coup encaissé sans destruction', () => {
-    const state = duel({ drawn: card(3) }, { life: [card(10)], battery: card(6) })
+    const state = duelDrawing(3, {}, { life: [card(10)], battery: card(6) })
     const { state: next } = applyAction(state, 'a', { type: 'attack', targetId: 'b' })
 
     expect(next.players[1]!.battery?.value).toBe(6)
   })
 
   it('survit à une attaque entièrement bloquée par le bouclier', () => {
-    const state = duel({ drawn: card(4) }, { shield: card(10), battery: card(6) })
+    const state = duelDrawing(4, {}, { shield: card(10), battery: card(6) })
     const { state: next } = applyAction(state, 'a', { type: 'attack', targetId: 'b' })
 
     expect(next.players[1]!.battery?.value).toBe(6)
@@ -88,7 +88,7 @@ describe('la batterie de la cible (GAME_RULES §6, commit « fix charge when dmg
 
 describe('la batterie de l’attaquant (GAME_RULES §5)', () => {
   it('est consommée par l’attaque, même sans dégâts', () => {
-    const state = duel({ drawn: card(2), battery: card(3) }, { shield: card(13) })
+    const state = duelDrawing(2, { battery: card(3) }, { shield: card(13) })
     const { state: next, events } = applyAction(state, 'a', { type: 'attack', targetId: 'b' })
 
     expect(next.players[0]!.battery).toBeUndefined()
@@ -96,7 +96,7 @@ describe('la batterie de l’attaquant (GAME_RULES §5)', () => {
   })
 
   it('part avec la carte jouée dans l’événement d’attaque', () => {
-    const state = duel({ drawn: card(7), battery: card(4) })
+    const state = duelDrawing(7, { battery: card(4) })
     const { events } = applyAction(state, 'a', { type: 'attack', targetId: 'b' })
 
     const resolved = events.find((e) => e.t === 'attack-resolved')!

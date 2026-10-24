@@ -3,6 +3,10 @@
 Jeu de cartes multijoueur en temps réel, joué à l'origine sur table et porté à l'écran
 avec une scène 3D. De 2 à 8 joueurs, par salon, sans compte ni installation.
 
+Le principe tient en une phrase : **on choisit son coup et sa cible avant de connaître sa
+carte**. Attaquer est un pari, changer un bouclier aussi — la carte tirée peut blinder la
+cible autant que la mettre à nu.
+
 Les règles complètes et les arbitrages de cette version sont dans **[GAME_RULES.md](GAME_RULES.md)**.
 
 ## Démarrer

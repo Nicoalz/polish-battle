@@ -18,6 +18,14 @@ export type Flight = {
 }
 
 type Stage = {
+  /**
+   * Carte dévoilée au centre de la table.
+   *
+   * Un coup se joue à l'aveugle : la carte n'existe qu'au moment de se résoudre, le
+   * temps d'être vue. Elle n'appartient donc à aucun joueur et ne vit que dans la mise
+   * en scène.
+   */
+  reveal?: Card
   flight?: Flight
   /** Date du dernier impact : éclair et secousse en découlent par décroissance. */
   impactAt: number
@@ -27,6 +35,7 @@ type Stage = {
   /** Siège sur lequel la caméra se penche pendant une cinématique. */
   focusSeat?: number
 
+  setReveal: (card: Card | undefined) => void
   setFlight: (flight: Flight | undefined) => void
   impact: (power: number, seat?: number) => void
   focus: (seat: number | undefined) => void
@@ -36,6 +45,7 @@ export const useStage = create<Stage>((set) => ({
   impactAt: -Infinity,
   impactPower: 0,
 
+  setReveal: (card) => set({ reveal: card }),
   setFlight: (flight) => set({ flight }),
   impact: (power, seat) =>
     set({ impactAt: performance.now(), impactPower: power, impactSeat: seat }),

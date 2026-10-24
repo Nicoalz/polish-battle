@@ -27,7 +27,6 @@ const RECONNECTION_WINDOW_SECONDS = 60
 const DISCONNECTED_TURN_MS = 30_000
 
 const ACTION_TYPES: ReadonlySet<string> = new Set<ActionType>([
-  'draw',
   'attack',
   'shield',
   'charge',
@@ -204,28 +203,10 @@ export class GameRoom extends Room<GameSchema> {
 
     if (events.length > 0) {
       this.state.version += 1
-      // Diffusion individuelle plutôt que collective : le récit n'est pas le même pour
-      // tout le monde, puisque chacun ne doit connaître que sa propre pioche.
-      for (const client of this.clients) {
-        const viewer = this.seatBySession.get(client.sessionId)
-        client.send('events', {
-          version: this.state.version,
-          events: redact(events, viewer),
-        })
-      }
+      this.broadcast('events', { version: this.state.version, events: redact(events) })
     }
 
-    this.sendHands()
     this.refreshSkipTimer()
-  }
-
-  /** Envoie à chaque joueur sa carte piochée, et à lui seul. */
-  private sendHands(): void {
-    for (const client of this.clients) {
-      const playerId = this.seatBySession.get(client.sessionId)
-      const player = playerId ? findPlayer(this.game, playerId) : undefined
-      client.send('hand', player?.drawn ?? null)
-    }
   }
 
   /**
@@ -265,25 +246,19 @@ export class GameRoom extends Room<GameSchema> {
 }
 
 /**
- * Retire du récit ce que ce joueur-là n'a pas à savoir.
+ * Retire du récit ce que personne n'a à savoir.
  *
- * Une pioche n'est connue que de son auteur, et une charge de personne. Caviarder la
- * seule charge ne suffisait pas : la carte piochée était annoncée en clair juste avant,
- * et il suffisait de rapprocher les deux pour en déduire la valeur. Le moteur, lui,
- * reste franc — c'est au transport de décider ce qui se dit, et à qui.
+ * Un coup se jouant à l'aveugle, aucune carte n'est détenue : il n'y a plus de pioche à
+ * cacher, et les cartes d'attaque ou de bouclier sont publiques par nature. Reste la
+ * charge, posée face cachée, dont la valeur ne doit pas transiter — le moteur l'annonce
+ * franchement, c'est au transport de la taire.
  */
-function redact(events: GameEvent[], viewerId: string | undefined): GameEvent[] {
-  return events.map((event) => {
-    if (event.t === 'drawn') {
-      return event.playerId === viewerId
-        ? event
-        : { ...event, card: hiddenCard('drawn', event.playerId) }
-    }
-    if (event.t === 'battery-set') {
-      return { ...event, card: hiddenCard('battery', event.playerId) }
-    }
-    return event
-  })
+function redact(events: GameEvent[]): GameEvent[] {
+  return events.map((event) =>
+    event.t === 'battery-set'
+      ? { ...event, card: hiddenCard('battery', event.playerId) }
+      : event,
+  )
 }
 
 // ---------------------------------------------------------------------------
@@ -293,8 +268,8 @@ function redact(events: GameEvent[], viewerId: string | undefined): GameEvent[] 
 function parseAction(message: unknown): Action | undefined {
   const type = readString(message, 'type')
   if (!type || !ACTION_TYPES.has(type)) return undefined
-  if (type === 'draw') return { type: 'draw' }
 
+  // Tout coup vise quelqu'un : il n'existe plus d'action sans cible.
   const targetId = readString(message, 'targetId')
   if (!targetId) return undefined
   return { type, targetId } as Action

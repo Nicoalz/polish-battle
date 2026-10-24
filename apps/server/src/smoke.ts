@@ -37,13 +37,6 @@ function check(label: string, condition: boolean, detail = ''): void {
   }
 }
 
-/** Replace la pioche privée dans l'état, comme le fait le vrai client. */
-function withHand(state: GameState, playerId: string, hand: Card | undefined): GameState {
-  const mine = state.players.find((player) => player.id === playerId)
-  if (hand && mine?.drawn) mine.drawn = hand
-  return state
-}
-
 function snapshot(room: Room): GameState {
   return fromWire((room.state as unknown as { toJSON(): WireGame }).toJSON())
 }
@@ -77,10 +70,7 @@ async function main(): Promise<void> {
   let revealedOnAttack = false
   /** Ce qu'un joueur donné n'aurait jamais dû pouvoir lire. */
   const leaks: string[] = []
-  let sawOwnDraw = false
-  let sawOthersDraw = false
-  /** La pioche privée de chaque joueur, telle que le vrai client la reçoit. */
-  const hands: (Card | undefined)[] = []
+  let sawReveal = false
 
   for (const [index, name] of ['Alice', 'Bob', 'Chloé'].entries()) {
     const room = await (index === 0
@@ -94,16 +84,11 @@ async function main(): Promise<void> {
         // table, compter partout multiplierait les totaux par le nombre de joueurs.
         if (index === 0) eventCounts.set(event.t, (eventCounts.get(event.t) ?? 0) + 1)
 
+        // Une carte jouée en attaque ou en bouclier se révèle à toute la table : c'est
+        // au moment du coup, pas avant, et c'est voulu.
         if (event.t === 'drawn') {
-          if (event.playerId === viewer) {
-            sawOwnDraw = true
-            if (isHiddenCard(event.card)) leaks.push('sa propre pioche lui est cachée')
-          } else {
-            sawOthersDraw = true
-            if (!isHiddenCard(event.card)) {
-              leaks.push(`${viewer} voit la pioche de ${event.playerId}`)
-            }
-          }
+          sawReveal = true
+          if (isHiddenCard(event.card)) leaks.push('une carte jouée arrive masquée')
         }
 
         if (event.t === 'battery-set' && !isHiddenCard(event.card)) {
@@ -116,13 +101,6 @@ async function main(): Promise<void> {
       }
     })
 
-    // Canal privé : ma pioche, et elle seule. Le vrai client la replace dans son état
-    // avant de décider quoi jouer ; le test fait de même, sans quoi l'IA jouerait à
-    // l'aveugle sur une carte masquée.
-    room.onMessage('hand', (card: Card | null) => {
-      if (card && isHiddenCard(card)) leaks.push('la carte privée arrive masquée')
-      hands[index] = card ?? undefined
-    })
     room.onMessage('rejected', (payload: any) => rejections.push(payload.code))
     rooms.push(room)
   }
@@ -184,22 +162,14 @@ async function main(): Promise<void> {
     const player = state.players.find((p) => p.seat === state.turnSeat)
     if (!player) break
 
-    const index = roomPlayerIds.indexOf(player.id)
-    const room = rooms[index]
-    // Chacun décide depuis sa propre vue, pioche privée replacée.
-    const own = room ? withHand(snapshot(room), player.id, hands[index]) : state
-    const action = chooseAction(own, player.id)
+    const room = rooms[roomPlayerIds.indexOf(player.id)]
+    // Chacun décide depuis sa propre vue — et, comme un humain, sans connaître sa carte.
+    const action = chooseAction(room ? snapshot(room) : state, player.id)
     if (!room || !action) break
-    for (const [index, seen] of state.players.entries()) {
-      if (seen.battery) {
-        sawBattery = true
-        if (!isHiddenCard(seen.battery)) leaks.push(`charge lisible dans l'état de ${seen.id}`)
-      }
-      // Dans l'état partagé, seule ma propre pioche m'est révélée — et encore, par un
-      // autre canal : celle du schéma est masquée pour tout le monde.
-      if (seen.drawn && !isHiddenCard(seen.drawn) && index !== 0) {
-        leaks.push(`pioche de ${seen.id} lisible dans l'état partagé`)
-      }
+    for (const seen of state.players) {
+      if (!seen.battery) continue
+      sawBattery = true
+      if (!isHiddenCard(seen.battery)) leaks.push(`charge lisible dans l'état de ${seen.id}`)
     }
 
     const versionBefore = (alice.state as any).version
@@ -219,8 +189,7 @@ async function main(): Promise<void> {
   )
   check('des événements ont été diffusés', (eventCounts.get('attack-resolved') ?? 0) > 0)
   check('une charge a bien été posée pendant la partie', sawBattery)
-  check('chacun reçoit sa propre pioche', sawOwnDraw)
-  check('chacun voit les autres piocher', sawOthersDraw)
+  check('les cartes jouées se révèlent à la table', sawReveal)
   check(
     'aucune carte secrète ne fuit, ni par l’état ni par les événements',
     leaks.length === 0,
