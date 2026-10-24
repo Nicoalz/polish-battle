@@ -62,7 +62,7 @@ describe('le calcul des dégâts (GAME_RULES §5 et §6)', () => {
   })
 })
 
-describe('la batterie de la cible (GAME_RULES §6, commit « fix charge when dmg »)', () => {
+describe('la charge de la cible (GAME_RULES §6)', () => {
   it('saute quand une carte de vie est détruite', () => {
     const state = duelDrawing(9, {}, { life: [card(5), card(5)], battery: card(6) })
     const { state: next, events } = applyAction(state, 'a', { type: 'attack', targetId: 'b' })
@@ -71,18 +71,23 @@ describe('la batterie de la cible (GAME_RULES §6, commit « fix charge when dmg
     expect(events.some((e) => e.t === 'battery-lost' && e.playerId === 'b')).toBe(true)
   })
 
-  it('survit à un coup encaissé sans destruction', () => {
+  it('saute aussi sur un coup encaissé sans destruction', () => {
+    // Encaisser suffit : il n'est pas nécessaire d'y laisser une carte de vie.
     const state = duelDrawing(3, {}, { life: [card(10)], battery: card(6) })
-    const { state: next } = applyAction(state, 'a', { type: 'attack', targetId: 'b' })
+    const { state: next, events } = applyAction(state, 'a', { type: 'attack', targetId: 'b' })
 
-    expect(next.players[1]!.battery?.value).toBe(6)
+    expect(next.players[1]!.battery).toBeUndefined()
+    expect(events.some((e) => e.t === 'battery-lost' && e.playerId === 'b')).toBe(true)
+    expect(next.players[1]!.life[0]!.value).toBe(7)
   })
 
-  it('survit à une attaque entièrement bloquée par le bouclier', () => {
+  it('survit à une attaque entièrement arrêtée par le bouclier', () => {
+    // Rien n'est passé : il n'y a pas eu de dégâts, donc pas de charge perdue.
     const state = duelDrawing(4, {}, { shield: card(10), battery: card(6) })
-    const { state: next } = applyAction(state, 'a', { type: 'attack', targetId: 'b' })
+    const { state: next, events } = applyAction(state, 'a', { type: 'attack', targetId: 'b' })
 
     expect(next.players[1]!.battery?.value).toBe(6)
+    expect(events.some((e) => e.t === 'battery-lost' && e.playerId === 'b')).toBe(false)
   })
 })
 

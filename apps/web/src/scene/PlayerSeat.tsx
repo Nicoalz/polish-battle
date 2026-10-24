@@ -3,6 +3,7 @@ import { useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
 import type { PlayerState } from '@pb/engine'
 import { impactDecay, useStage } from './stage'
+import { useCountdown } from './useCountdown'
 import { useSettings } from '../settings'
 import { Card3D } from './Card3D'
 import { seatAngle, seatColor, seatPosition, seatScale } from './seats'
@@ -57,9 +58,13 @@ export function PlayerSeat({
   const angle = seatAngle(player.seat, mySeat, total)
   const outward: [number, number] = [Math.sin(angle), Math.cos(angle)]
 
+  // Les cartes de vie rendues descendent une valeur à la fois : la place d'une carte
+  // détruite reste donc occupée le temps qu'elle s'éteigne.
+  const life = useCountdown(player.life)
+
   // Disposition : les cartes de vie côte à côte, le bouclier posé en travers au-dessus,
   // et la charge éventuelle face cachée sur le côté.
-  const lifeWidth = Math.max(0, player.life.length - 1) * SPACING
+  const lifeWidth = Math.max(0, life.length - 1) * SPACING
   const [shieldY, shieldZ] = alongCard(CARD_HEIGHT / 2 + CARD_WIDTH / 2 + 0.09)
   const batteryX = lifeWidth / 2 + SPACING
 
@@ -147,7 +152,7 @@ export function PlayerSeat({
       />
 
       {/* Cartes de vie, côte à côte. */}
-      {player.life.map((card, index) => (
+      {life.map((card, index) => (
         <Card3D
           key={card.id}
           card={card}

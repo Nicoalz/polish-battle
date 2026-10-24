@@ -243,22 +243,28 @@ export function startGame(state: GameState): ApplyResult {
  * Applique des dégâts à la vie d'un joueur.
  *
  * Les cartes de vie forment une file : la plus ancienne encaisse en premier, et le
- * surplus déborde sur la suivante. La batterie de la cible ne saute que si une carte
- * de vie est effectivement détruite — pas à chaque coup encaissé.
+ * surplus déborde sur la suivante.
+ *
+ * **Encaisser fait sauter sa charge.** Un coup entièrement arrêté par le bouclier la
+ * laisse intacte — on n'a rien pris — mais dès qu'un point passe, elle est perdue,
+ * que la carte de vie survive ou non.
  */
 function applyDamage(
   target: PlayerState,
   amount: number,
   events: GameEvent[],
 ): void {
+  if (amount <= 0) return
+
+  if (target.battery) {
+    target.battery = undefined
+    events.push({ t: 'battery-lost', playerId: target.id, reason: 'broken' })
+  }
+
   let remaining = amount
   while (remaining > 0 && target.life.length > 0) {
     const top = target.life[0]!
     if (remaining >= top.value) {
-      if (target.battery) {
-        target.battery = undefined
-        events.push({ t: 'battery-lost', playerId: target.id, reason: 'broken' })
-      }
       remaining -= top.value
       target.life.shift()
       events.push({ t: 'life-destroyed', playerId: target.id, card: top })

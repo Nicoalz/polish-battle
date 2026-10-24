@@ -109,8 +109,8 @@ Points importants :
 - Si `dégâts <= 0` (bouclier ≥ attaque), **il ne se passe rien du tout**.
 - Les dégâts **débordent** d'une carte de vie à l'autre, mais le surplus final est perdu (pas de
   report sur un autre joueur).
-- **La batterie de la cible saute uniquement si une carte de vie est détruite**, pas à chaque coup
-  encaissé (c'est ce qu'a corrigé le commit `fix charge when dmg`).
+- **La batterie de la cible saute dès qu'elle encaisse**, qu'une carte de vie soit détruite
+  ou seulement entamée. Un coup entièrement arrêté par le bouclier la laisse intacte.
 - **Mort = somme des valeurs des cartes de vie == 0** ([back/game.ts:202-204](back/game.ts#L202-L204)).
 
 ## 7. Les super-pouvoirs (1× par partie, sans piocher)
@@ -239,7 +239,7 @@ Conséquences, en cascade :
 - Bouclier **permanent**, jamais usé, remplacé uniquement par « Changer un bouclier ».
 - Dégâts `carte + batterie − bouclier`, file FIFO sur les cartes de vie, débordement,
   surplus perdu.
-- Batterie de la cible perdue **uniquement** si une carte de vie est détruite.
+- Batterie de la cible perdue dès qu'elle encaisse des dégâts (voir correction n°12).
 - Charge possible sur **n'importe quel** joueur vivant, y compris un adversaire.
 - Résurrection : 1 carte de vie + bouclier neuf, et **les deux** joueurs perdent leur
   super-pouvoir.
@@ -261,6 +261,7 @@ Conséquences, en cascade :
 | 9 | Boucle infinie si plus personne n'est vivant | Garde-fou dans la recherche du siège suivant |
 | 10 | La partie continuait après la victoire | Phase `finished` : plus aucune action acceptée |
 | 11 | La valeur d'une charge était visible de tous | La charge est posée **face cachée** : sa valeur ne quitte pas le serveur et ne se révèle qu'en étant dépensée |
+| 12 | La charge ne sautait que si une carte de vie était détruite | **Encaisser suffit** : dès qu'un point passe le bouclier, la charge est perdue. Un coup entièrement arrêté la laisse intacte |
 
 ### La charge, face cachée
 
