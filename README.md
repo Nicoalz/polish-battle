@@ -16,6 +16,11 @@ Ouvre <http://localhost:5173>, choisis un pseudo, crée un salon. Le code du sal
 dans l'URL : partager le lien suffit à inviter. Ferme un onglet en pleine partie et
 rouvre-le, tu retrouveras ta place et tes cartes.
 
+**Pour jouer plusieurs joueurs depuis un seul navigateur**, ajoute `&joueur=2`,
+`&joueur=3`… à l'URL de chaque onglet supplémentaire. Sans ce paramètre, tous les
+onglets partagent la même identité — c'est le stockage local qui veut ça — et le second
+reprend simplement le siège du premier.
+
 | Commande | Effet |
 |---|---|
 | `pnpm dev` | serveur + client, rechargement à chaud |

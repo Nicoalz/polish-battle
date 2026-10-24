@@ -52,6 +52,8 @@ export default function App() {
     // et nulle part ailleurs, qu'on peut ouvrir le contexte audio.
     unlockAudio()
     useSettings.getState().applyVolumes()
+    // On n'ajoute que le salon : les autres paramètres de l'URL, dont `joueur`,
+    // doivent survivre, sans quoi l'onglet reprendrait l'identité par défaut.
     const url = new URL(window.location.href)
     url.searchParams.set('salon', target)
     window.history.replaceState({}, '', url)
