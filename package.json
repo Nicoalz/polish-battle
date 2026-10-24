@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "description": "Polish Battle \u2014 jeu de cartes multijoueur temps r\u00e9el",
+  "packageManager": "pnpm@11.9.0",
   "scripts": {
     "dev": "pnpm --parallel --filter \"./apps/*\" dev",
     "build": "pnpm -r build",

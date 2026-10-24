@@ -64,8 +64,30 @@ rattrape toujours.
 
 ## Déployer
 
-Le serveur de jeu sert aussi le client compilé : une seule application, une seule
+Le serveur de jeu sert aussi le client compilé : **une seule application**, une seule
 origine, rien à configurer côté client.
+
+### Render
+
+`render.yaml` décrit le service. En créant un **Web Service** depuis le dépôt :
+
+| Champ | Valeur |
+|---|---|
+| Runtime | Node |
+| Build command | `corepack enable && pnpm install --frozen-lockfile && pnpm --filter @pb/web build` |
+| Start command | `pnpm --filter @pb/server start` |
+| Health check path | `/health` |
+| Variable | `NODE_ENV=production` |
+
+`NODE_ENV=production` n'est pas optionnel : c'est lui qui déclenche le service des
+fichiers du client. Sans lui, le serveur répond mais la page est vide.
+
+Garde **une seule instance** : les parties vivent en mémoire, et deux instances
+enverraient deux joueurs du même salon sur deux tables différentes. Sur le plan gratuit,
+le service s'endort après quinze minutes sans trafic — les parties en cours sont alors
+perdues, et le premier visiteur attend le réveil.
+
+### Fly.io
 
 ```bash
 fly launch --no-deploy   # une fois

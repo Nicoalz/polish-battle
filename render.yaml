@@ -1,0 +1,20 @@
+# Déploiement Render. Un seul service : le serveur de jeu sert aussi le client compilé,
+# donc même origine, pas de CORS et rien à configurer côté client.
+#
+# Render renseigne lui-même PORT ; le serveur le lit. `NODE_ENV=production` est
+# indispensable : c'est lui qui active le service des fichiers du client.
+services:
+  - type: web
+    name: polish-battle
+    runtime: node
+    plan: free
+    region: frankfurt
+    branch: v2-rewrite
+    buildCommand: corepack enable && pnpm install --frozen-lockfile && pnpm --filter @pb/web build
+    startCommand: pnpm --filter @pb/server start
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: NODE_VERSION
+        value: '22'
