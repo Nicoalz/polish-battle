@@ -8,6 +8,20 @@ export const en: Dict = {
     devNotice: 'Development interface — the 3D scene lands in phase 3.',
   },
 
+  home: {
+    tagline: 'Commit to your move before seeing your card.',
+    avatar: 'Your token',
+    joinByCode: 'Join with a code',
+    create: 'Create a room',
+    createPublic: 'Public',
+    createPrivate: 'Private',
+    visibilityHint: 'A public room shows up in the list below.',
+    openRooms: 'Open rooms',
+    noRooms: 'No public room right now.',
+    players: (count) => (count > 1 ? `${count} players` : `${count} player`),
+    inProgress: 'in progress',
+  },
+
   lobby: {
     nickname: 'Your nickname',
     nicknamePlaceholder: 'Nico',
@@ -29,6 +43,7 @@ export const en: Dict = {
     skipTurn: 'Skip turn',
     kick: 'kick',
     yourTurn: 'Your move',
+    secondsLeft: (seconds) => `${seconds}s`,
     chooseAction: 'Your move — commit first, the card shows after',
     chooseTarget: (action: string) => `${action} who?`,
     log: 'Log',

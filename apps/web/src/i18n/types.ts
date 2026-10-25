@@ -23,6 +23,20 @@ export type Dict = {
     readonly devNotice: string
   }
 
+  readonly home: {
+    readonly tagline: string
+    readonly avatar: string
+    readonly joinByCode: string
+    readonly create: string
+    readonly createPublic: string
+    readonly createPrivate: string
+    readonly visibilityHint: string
+    readonly openRooms: string
+    readonly noRooms: string
+    readonly players: (count: number) => string
+    readonly inProgress: string
+  }
+
   readonly lobby: {
     readonly nickname: string
     readonly nicknamePlaceholder: string
@@ -45,6 +59,7 @@ export type Dict = {
     readonly kick: string
     readonly yourTurn: string
     readonly chooseAction: string
+    readonly secondsLeft: (seconds: number) => string
     readonly chooseTarget: (action: string) => string
     readonly log: string
     readonly reducedMotion: string

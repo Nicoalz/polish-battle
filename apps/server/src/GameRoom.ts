@@ -2,6 +2,8 @@ import { Room, type Client, type Delayed } from '@colyseus/core'
 import {
   IllegalActionError,
   MAX_PLAYERS,
+  ABSENT_TURN_LIMIT_MS,
+  TURN_LIMIT_MS,
   addPlayer,
   hiddenCard,
   isOpenToNewPlayers,
@@ -13,6 +15,7 @@ import {
   setConnected,
   skipTurn,
   startGame,
+  transferHost,
   type Action,
   type ActionType,
   type GameEvent,
@@ -23,8 +26,6 @@ import { syncState } from './sync'
 
 /** Délai de reconnexion avant de libérer définitivement un joueur parti. */
 const RECONNECTION_WINDOW_SECONDS = 60
-/** Au-delà, le tour d'un joueur déconnecté est passé pour ne pas bloquer la table. */
-const DISCONNECTED_TURN_MS = 30_000
 
 const ACTION_TYPES: ReadonlySet<string> = new Set<ActionType>([
   'attack',
@@ -39,6 +40,18 @@ type JoinOptions = {
   code?: string
   playerId?: string
   name?: string
+  avatar?: string
+  /** Un salon public apparaît dans la liste de la page d'accueil ; un privé, jamais. */
+  visibility?: 'public' | 'private'
+}
+
+/** Ce qu'un salon annonce de lui-même avant qu'on y entre. */
+export type RoomSummary = {
+  code: string
+  players: number
+  phase: string
+  /** Faux pour un salon privé : il n'apparaît alors dans aucune liste. */
+  listed: boolean
 }
 
 /**
@@ -55,6 +68,8 @@ export class GameRoom extends Room<GameSchema> {
   private game: GameState = createGame()
   private readonly seatBySession = new Map<string, string>()
   private skipTimer?: Delayed
+  private announced?: string
+  private listed = false
 
   override onCreate(options: JoinOptions): void {
     const state = new GameSchema()
@@ -66,6 +81,13 @@ export class GameRoom extends Room<GameSchema> {
     this.onMessage('skip', (client) => this.handleHostSkip(client))
     this.onMessage('kick', (client, message) => this.handleKick(client, message))
     this.onMessage('action', (client, message) => this.handleAction(client, message))
+
+    // On ne marque surtout pas le salon privé au sens de Colyseus : cela le retirerait
+    // du matchmaking, et personne ne pourrait plus le rejoindre par son code — chacun
+    // créerait silencieusement le sien. « Privé » veut seulement dire : absent de la
+    // liste. Le code reste l'unique porte d'entrée, et aucune route ne permet à un
+    // client d'énumérer les salons.
+    this.listed = options.visibility === 'public'
 
     this.commit([])
   }
@@ -80,7 +102,12 @@ export class GameRoom extends Room<GameSchema> {
       this.game = setConnected(this.game, playerId, true)
     } else {
       if (!isOpenToNewPlayers(this.game)) throw new Error('la partie est en cours')
-      this.game = addPlayer(this.game, { id: playerId, name: sanitizeName(options.name) })
+      this.game = addPlayer(this.game, {
+        id: playerId,
+        name: sanitizeName(options.name),
+        // `addPlayer` ramène de lui-même toute valeur inconnue à un avatar valide.
+        avatar: options.avatar,
+      })
     }
 
     this.seatBySession.set(client.sessionId, playerId)
@@ -199,7 +226,9 @@ export class GameRoom extends Room<GameSchema> {
 
   /** Publie le nouvel état et le récit de ce qui vient de se passer. */
   private commit(events: GameEvent[]): void {
+    this.ensureReachableHost()
     syncState(this.state, this.game)
+    this.announce()
 
     if (events.length > 0) {
       this.state.version += 1
@@ -210,8 +239,48 @@ export class GameRoom extends Room<GameSchema> {
   }
 
   /**
-   * Un joueur déconnecté ne doit pas geler la table : au bout d'un moment, son tour
-   * passe tout seul. C'est le bug n°12 de la v1, où un onglet fermé bloquait la partie.
+   * Publie de quoi présenter le salon dans la liste, sans y entrer.
+   *
+   * Seuls le code, l'effectif et l'état circulent : de quoi choisir une table, rien de
+   * ce qui s'y joue. On ne republie que lorsque quelque chose a bougé.
+   */
+  private announce(): void {
+    const summary: RoomSummary = {
+      code: this.state.code,
+      players: this.game.players.length,
+      phase: this.game.phase,
+      listed: this.listed,
+    }
+    const signature = `${summary.code}|${summary.players}|${summary.phase}|${summary.listed}`
+    if (this.announced === signature) return
+
+    this.announced = signature
+    void this.setMetadata(summary)
+  }
+
+  /**
+   * Le rôle d'hôte doit toujours être tenu par quelqu'un de présent.
+   *
+   * Il n'était transmis qu'au départ définitif d'un joueur, ce qui n'arrive pas en pleine
+   * partie : un hôte dont le téléphone meurt emportait avec lui les seuls moyens de
+   * relancer ou de débloquer la table.
+   */
+  private ensureReachableHost(): void {
+    const host = this.game.players.find((player) => player.isHost)
+    if (host?.connected) return
+
+    const present = this.game.players.find((player) => player.connected)
+    if (present && present.id !== host?.id) {
+      this.game = transferHost(this.game, present.id)
+    }
+  }
+
+  /**
+   * Aucun tour ne dure indéfiniment.
+   *
+   * Un onglet fermé ne fait attendre que quelques secondes ; un joueur bien présent mais
+   * parti chercher à boire a droit à plus de temps, mais pas à l'éternité. Sans ce délai,
+   * seul l'hôte pouvait débloquer la table — et il lui arrive d'être justement l'absent.
    */
   private refreshSkipTimer(): void {
     this.skipTimer?.clear()
@@ -219,13 +288,14 @@ export class GameRoom extends Room<GameSchema> {
 
     if (this.game.phase !== 'playing') return
     const player = currentPlayer(this.game)
-    if (!player || player.connected) return
+    if (!player) return
 
+    const limit = player.connected ? TURN_LIMIT_MS : ABSENT_TURN_LIMIT_MS
     this.skipTimer = this.clock.setTimeout(() => {
       const result = skipTurn(this.game)
       this.game = result.state
       this.commit(result.events)
-    }, DISCONNECTED_TURN_MS)
+    }, limit)
   }
 
   private playerIdOf(client: Client): string | undefined {

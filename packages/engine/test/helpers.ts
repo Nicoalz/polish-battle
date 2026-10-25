@@ -25,6 +25,7 @@ export function player(
   return {
     id,
     name: id.toUpperCase(),
+    avatar: '🦊',
     seat,
     life: [card(5), card(5)],
     shield: cursed(), // bouclier à 0 par défaut : les attaques passent entièrement

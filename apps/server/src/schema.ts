@@ -26,6 +26,7 @@ export const PlayerSchema = schema(
   {
     id: 'string',
     name: 'string',
+    avatar: 'string',
     seat: 'uint8',
     life: [CardSchema],
     shield: CardSchema,

@@ -20,6 +20,8 @@ export type Phase = 'lobby' | 'playing' | 'finished'
 export type PlayerState = {
   id: string
   name: string
+  /** Jeton choisi pour se représenter à la table. */
+  avatar: string
   /** Position à la table, égale à l'index dans `players`. */
   seat: number
   /** Cartes de vie, consommées en file (la plus ancienne encaisse en premier). */

@@ -2,7 +2,7 @@ import { create } from 'zustand'
 import { Client, type Room } from 'colyseus.js'
 import type { Action, GameEvent, GameState } from '@pb/engine'
 import { fromWire, type WireGame } from '@pb/engine'
-import { getPlayerId, saveName } from './identity'
+import { getPlayerId, saveAvatar, saveName } from './identity'
 import { dict, type RejectionCode } from '../i18n'
 
 /**
@@ -20,11 +20,21 @@ function defaultServerUrl(): string {
 
 const SERVER_URL = import.meta.env.VITE_SERVER_URL ?? defaultServerUrl()
 
+/** Même hôte que le jeu, mais en HTTP : c'est par là qu'on demande la liste des salons. */
+const HTTP_URL = SERVER_URL.replace(/^ws/, 'http')
+
 /** Fenêtre pendant laquelle on retente de reprendre la partie après une coupure. */
 const RECONNECT_ATTEMPTS = 20
 const RECONNECT_DELAY_MS = 3000
 
 export type ConnectionStatus = 'idle' | 'connecting' | 'connected' | 'reconnecting' | 'error'
+
+/** Ce qu'un salon public annonce de lui-même avant qu'on y entre. */
+export type RoomSummary = {
+  code: string
+  players: number
+  phase: string
+}
 
 /**
  * Un lot d'événements, avec la version d'état qu'il produit.
@@ -66,8 +76,17 @@ type Store = {
   /** Dernière version déjà racontée à l'écran. */
   playedVersion: number
   log: LogEntry[]
+  /** Salons publics ouverts, rafraîchis depuis la page d'accueil. */
+  openRooms: RoomSummary[]
 
-  connect: (code: string, name: string) => Promise<void>
+  connect: (
+    code: string,
+    name: string,
+    avatar: string,
+    visibility?: 'public' | 'private',
+  ) => Promise<void>
+  /** Interroge le serveur sur les salons publics joignables. */
+  refreshRooms: () => Promise<void>
   leave: () => Promise<void>
   send: (action: Action) => void
   command: (type: 'start' | 'restart' | 'skip') => void
@@ -178,17 +197,35 @@ export const useGame = create<Store>((set, get) => {
     version: 0,
     playedVersion: 0,
     log: [],
+    openRooms: [],
 
-    async connect(code, name) {
+    async refreshRooms() {
+      try {
+        const response = await fetch(`${HTTP_URL}/rooms`)
+        const rooms = (await response.json()) as RoomSummary[]
+        set({ openRooms: rooms.sort((a, b) => b.players - a.players) })
+      } catch {
+        // Serveur injoignable : la liste reste telle quelle plutôt que de clignoter.
+      }
+    },
+
+    async connect(code, name, avatar, visibility = 'private') {
       if (get().status === 'connecting') return
       set({ status: 'connecting', error: undefined })
       saveName(name)
+      saveAvatar(avatar)
 
       const target = code.trim().toUpperCase()
       try {
         const client = new Client(SERVER_URL)
         attach(
-          await client.joinOrCreate('game', { code: target, playerId: get().playerId, name }),
+          await client.joinOrCreate('game', {
+            code: target,
+            playerId: get().playerId,
+            name,
+            avatar,
+            visibility,
+          }),
           target,
         )
       } catch (error) {

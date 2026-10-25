@@ -14,6 +14,7 @@ export type WireCard = { id: string; rank: number; value: number }
 export type WirePlayer = {
   id: string
   name: string
+  avatar: string
   seat: number
   life: WireCard[]
   shield: WireCard
@@ -62,6 +63,7 @@ function toPlayer(player: WirePlayer): PlayerState {
   return {
     id: player.id,
     name: player.name,
+    avatar: player.avatar,
     seat: player.seat,
     life: (player.life ?? []).map(toCard),
     shield: toCard(player.shield),

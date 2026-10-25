@@ -16,7 +16,9 @@ pnpm install
 pnpm dev          # serveur de jeu sur 2567, client sur 5173
 ```
 
-Ouvre <http://localhost:5173>, choisis un pseudo, crée un salon. Le code du salon vit
+Ouvre <http://localhost:5173>, choisis un jeton et un pseudo, puis crée un salon —
+**public**, et il apparaît dans la liste de la page d'accueil, ou **privé**, et son code
+en reste l'unique porte d'entrée. Le code du salon vit
 dans l'URL : partager le lien suffit à inviter. Ferme un onglet en pleine partie et
 rouvre-le, tu retrouveras ta place et tes cartes.
 
@@ -46,6 +48,10 @@ packages/engine/   règles pures, sans réseau ni rendu — c'est ici que vit le
 apps/server/       salon autoritaire (Colyseus) : valide, applique, diffuse
 apps/web/          client (Vite + React + React Three Fiber)
 ```
+
+Le serveur expose trois routes en plus du jeu : `/health` pour l'hôte, `/rooms` pour la
+liste des salons publics — Colyseus n'en propose aucune, et c'est précisément ce qui rend
+un salon privé introuvable — et, en production, le client compilé lui-même.
 
 Trois principes structurent le tout :
 

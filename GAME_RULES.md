@@ -33,6 +33,10 @@ fait : taper, changer un bouclier, ou charger une batterie.
 - **Les places sont redistribuées à chaque manche.** Sans cela on rejoue toujours avec les
   mêmes voisins et, surtout, toujours juste après le même joueur — or savoir qui joue après
   soi change ce qu'on ose. Le rôle d'hôte, lui, appartient au joueur et non à la chaise.
+- **Aucun tour ne dure indéfiniment** : au bout de 90 secondes, la main passe d'office.
+  Un joueur dont l'onglet est fermé n'est attendu que 25 secondes. Ce n'est pas une règle
+  du jeu mais une convention de table — sans elle, quelqu'un qui pose son téléphone fait
+  attendre tout le monde sans recours.
 - Le siège qui ouvre est tiré au sort séparément : « où l'on est assis » et « qui commence »
   restent deux questions distinctes.
 - Chaque joueur démarre avec :

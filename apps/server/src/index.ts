@@ -3,7 +3,7 @@ import process from 'node:process'
 import { existsSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import path from 'node:path'
-import { Server } from '@colyseus/core'
+import { Server, matchMaker } from '@colyseus/core'
 import { WebSocketTransport } from '@colyseus/ws-transport'
 import { monitor } from '@colyseus/monitor'
 import express from 'express'
@@ -29,6 +29,26 @@ app.use((req, res, next) => {
 
 app.get('/health', (_req, res) => {
   res.json({ ok: true, uptime: process.uptime() })
+})
+
+/**
+ * Salons publics joignables.
+ *
+ * Le client publié ne sait pas lister les salons, et Colyseus n'expose aucune route pour
+ * le faire : cette liste est donc la seule qui existe. Un salon privé en est écarté ici,
+ * ce qui suffit à le rendre introuvable autrement que par son code.
+ */
+app.get('/rooms', async (_req, res) => {
+  try {
+    const rooms = await matchMaker.query({ name: 'game', locked: false })
+    res.json(
+      rooms
+        .map((room) => room.metadata as { code?: string; listed?: boolean })
+        .filter((room) => Boolean(room?.code) && room.listed === true),
+    )
+  } catch {
+    res.json([])
+  }
 })
 
 if (!IS_PRODUCTION) {

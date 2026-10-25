@@ -7,6 +7,7 @@ import {
   type PlayerState,
 } from './types'
 import { drawCard, drawLifeCards, totalValue } from './cards'
+import { toAvatar } from './avatars'
 import { nextInt } from './rng'
 
 export const MIN_PLAYERS = 2
@@ -14,6 +15,18 @@ export const MAX_PLAYERS = 8
 export const INITIAL_LIFE_CARDS = 2
 /** Les super-pouvoirs tirent une carte dont la valeur est relevée à ce plancher. */
 export const SUPER_POWER_FLOOR = 8
+
+/**
+ * Au-delà de ce délai, le tour passe d'office.
+ *
+ * Ce n'est pas une règle du jeu mais une convention de table : sans elle, quelqu'un qui
+ * pose son téléphone fait attendre tout le monde sans recours. Le délai est partagé avec
+ * le client, qui s'en sert pour afficher le décompte — les deux doivent dire la même chose.
+ */
+export const TURN_LIMIT_MS = 90_000
+
+/** Un joueur dont l'onglet est fermé n'a pas besoin d'autant : on ne l'attend pas. */
+export const ABSENT_TURN_LIMIT_MS = 25_000
 
 /**
  * Motifs de refus, sous forme de codes stables.
@@ -135,7 +148,7 @@ export function isOpenToNewPlayers(state: GameState): boolean {
 
 export function addPlayer(
   state: GameState,
-  { id, name }: { id: string; name: string },
+  { id, name, avatar }: { id: string; name: string; avatar?: string },
 ): GameState {
   if (!isOpenToNewPlayers(state)) {
     throw new IllegalActionError('game-already-started', 'la partie est en cours')
@@ -152,6 +165,7 @@ export function addPlayer(
   const player: PlayerState = {
     id,
     name,
+    avatar: toAvatar(avatar),
     seat: next.players.length,
     life: [],
     shield: { id: '', rank: 0, value: 0 },

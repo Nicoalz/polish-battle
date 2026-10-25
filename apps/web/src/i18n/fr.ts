@@ -8,6 +8,20 @@ export const fr: Dict = {
     devNotice: 'Interface de développement — la scène 3D arrive en phase 3.',
   },
 
+  home: {
+    tagline: 'On choisit son coup avant de voir sa carte.',
+    avatar: 'Ton jeton',
+    joinByCode: 'Rejoindre par code',
+    create: 'Créer un salon',
+    createPublic: 'Public',
+    createPrivate: 'Privé',
+    visibilityHint: 'Un salon public apparaît dans la liste ci-dessous.',
+    openRooms: 'Salons ouverts',
+    noRooms: 'Aucun salon public pour l’instant.',
+    players: (count) => (count > 1 ? `${count} joueurs` : `${count} joueur`),
+    inProgress: 'en cours',
+  },
+
   lobby: {
     nickname: 'Ton pseudo',
     nicknamePlaceholder: 'Nico',
@@ -29,6 +43,7 @@ export const fr: Dict = {
     skipTurn: 'Passer le tour',
     kick: 'exclure',
     yourTurn: 'À toi de jouer',
+    secondsLeft: (seconds) => `${seconds} s`,
     chooseAction: 'À toi de jouer — choisis ton coup, la carte se révèle ensuite',
     chooseTarget: (action: string) => `${action} qui ?`,
     log: 'Journal',

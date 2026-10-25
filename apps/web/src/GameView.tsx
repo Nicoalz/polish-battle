@@ -7,6 +7,7 @@ import { useIsCompact } from './useViewport'
 import { GameScene } from './scene/GameScene'
 import { Nameplate } from './Nameplate'
 import { History } from './History'
+import { TurnClock } from './TurnClock'
 import { seatColor } from './scene/seats'
 import { useDirector } from './scene/director'
 import { useStage } from './scene/stage'
@@ -136,7 +137,13 @@ export function GameView({ game, display }: { game: GameState; display: GameStat
             de comprimer les deux autres blocs. */}
         <p className="pointer-events-none order-last mx-auto w-full rounded-full bg-black/45 px-4 py-1.5 text-center text-xs backdrop-blur-sm sm:order-none sm:w-auto sm:text-sm">
           {display.phase === 'lobby' && t.table.waiting}
-          {display.phase === 'playing' && t.table.turnOf(current?.name ?? '?')}
+          {display.phase === 'playing' && (
+            <>
+              {t.table.turnOf(current?.name ?? '?')}
+              {/* Le décompte suit l'état autoritaire : c'est lui que le serveur chronomètre. */}
+              <TurnClock turnSeat={game.turnSeat} playing={game.phase === 'playing'} />
+            </>
+          )}
           {display.phase === 'finished' && t.table.wins(winner?.name ?? '?')}
         </p>
 
@@ -147,6 +154,7 @@ export function GameView({ game, display }: { game: GameState; display: GameStat
             className="pointer-events-none flex items-center gap-1 rounded-full bg-black/45 px-2 py-1 text-[11px] font-semibold backdrop-blur-sm"
             style={{ color: seatColor(me.seat) }}
           >
+            <span aria-hidden>{me.avatar}</span>
             {me.name}
             {me.isHost && <span>👑</span>}
             {me.hasSuperPower && <span>💥</span>}

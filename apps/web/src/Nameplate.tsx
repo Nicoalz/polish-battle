@@ -44,6 +44,7 @@ export function Nameplate({
         alive ? 'bg-black/80' : 'bg-black/60 line-through opacity-60'
       }`}
     >
+      <span aria-hidden>{player.avatar}</span>
       {player.name}
       {player.isHost && <span>👑</span>}
       {player.hasSuperPower && <span>💥</span>}

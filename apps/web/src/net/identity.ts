@@ -1,5 +1,6 @@
 const PLAYER_ID_KEY = 'pb.playerId'
 const NAME_KEY = 'pb.name'
+const AVATAR_KEY = 'pb.avatar'
 
 /**
  * Permet d'incarner plusieurs joueurs depuis un même navigateur.
@@ -55,4 +56,12 @@ export function getSavedName(): string {
 
 export function saveName(name: string): void {
   localStorage.setItem(storageKey(NAME_KEY), name)
+}
+
+export function getSavedAvatar(): string {
+  return localStorage.getItem(storageKey(AVATAR_KEY)) ?? ''
+}
+
+export function saveAvatar(avatar: string): void {
+  localStorage.setItem(storageKey(AVATAR_KEY), avatar)
 }

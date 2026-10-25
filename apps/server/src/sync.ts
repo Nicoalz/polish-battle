@@ -58,6 +58,7 @@ function hide(card: Card | undefined, playerId: string) {
 function syncPlayer(node: PlayerSchema, player: PlayerState): void {
   if (node.id !== player.id) node.id = player.id
   if (node.name !== player.name) node.name = player.name
+  if (node.avatar !== player.avatar) node.avatar = player.avatar
   if (node.seat !== player.seat) node.seat = player.seat
   if (node.hasSuperPower !== player.hasSuperPower) node.hasSuperPower = player.hasSuperPower
   if (node.connected !== player.connected) node.connected = player.connected

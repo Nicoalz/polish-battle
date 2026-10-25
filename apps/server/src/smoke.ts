@@ -17,6 +17,7 @@ import {
   chooseAction,
   fromWire,
   isHiddenCard,
+  type Action,
   type Card,
   type GameState,
   type WireGame,
@@ -81,8 +82,9 @@ async function main(): Promise<void> {
     room.onMessage('events', (payload: any) => {
       for (const event of payload.events) {
         // On ne compte que sur un seul client : chaque diffusion arrive à toute la
-        // table, compter partout multiplierait les totaux par le nombre de joueurs.
-        if (index === 0) eventCounts.set(event.t, (eventCounts.get(event.t) ?? 0) + 1)
+        // table, compter partout multiplierait les totaux. C'est Bob qui compte, parce
+        // qu'il est le seul à ne jamais quitter la partie.
+        if (index === 1) eventCounts.set(event.t, (eventCounts.get(event.t) ?? 0) + 1)
 
         // Une carte jouée en attaque ou en bouclier se révèle à toute la table : c'est
         // au moment du coup, pas avant, et c'est voulu.
@@ -105,31 +107,38 @@ async function main(): Promise<void> {
     rooms.push(room)
   }
 
-  const [alice, bob, chloe] = rooms as [Room, Room, Room]
+  /** Observatoire stable : Bob ne quitte jamais la partie. */
+  const table = () => rooms[1]!
+  /**
+   * Les places sont redistribuées à chaque manche : on cherche un joueur par son
+   * identité, jamais par sa position dans la liste.
+   */
+  const seen = (playerId: string) => snapshot(table()).players.find((p) => p.id === playerId)!
+  const roomOf = (playerId: string) => rooms[roomPlayerIds.indexOf(playerId)]!
 
   console.log('\nSalon')
-  await waitFor(() => snapshot(alice).players.length === 3, '3 joueurs au salon')
-  const lobby = snapshot(alice)
+  await waitFor(() => snapshot(table()).players.length === 3, '3 joueurs au salon')
+  const lobby = snapshot(table())
   check('les 3 joueurs rejoignent le même salon', lobby.players.length === 3)
   check('le premier arrivant est hôte', lobby.players[0]!.isHost === true)
   check('les suivants ne le sont pas', lobby.players.slice(1).every((p) => !p.isHost))
   check('les cartes sont bien reçues', lobby.players[0]!.life.length === 2)
 
   console.log('\nAutorité du serveur')
-  bob.send('start')
+  roomOf('p1').send('start')
   await new Promise((resolve) => setTimeout(resolve, 300))
   check(
     'un non-hôte ne peut pas lancer la partie',
-    snapshot(alice).phase === 'lobby' && rejections.includes('host-only'),
-    `phase=${snapshot(alice).phase}`,
+    snapshot(table()).phase === 'lobby' && rejections.includes('host-only'),
+    `phase=${snapshot(table()).phase}`,
   )
 
-  alice.send('start')
-  await waitFor(() => snapshot(alice).phase === 'playing', 'partie démarrée')
-  check("l'hôte peut lancer la partie", snapshot(alice).phase === 'playing')
+  roomOf('p0').send('start')
+  await waitFor(() => snapshot(table()).phase === 'playing', 'partie démarrée')
+  check("l'hôte peut lancer la partie", snapshot(table()).phase === 'playing')
 
   const before = rejections.length
-  const notMyTurn = snapshot(alice).turnSeat === 0 ? bob : alice
+  const notMyTurn = snapshot(table()).turnSeat === 0 ? roomOf('p1') : roomOf('p0')
   notMyTurn.send('action', { type: 'draw' })
   await new Promise((resolve) => setTimeout(resolve, 300))
   check(
@@ -139,12 +148,12 @@ async function main(): Promise<void> {
   )
 
   console.log('\nReprise de siège')
-  await chloe.leave(true)
-  await waitFor(() => snapshot(alice).players[2]!.connected === false, 'Chloé déconnectée')
-  check('un départ marque le joueur déconnecté', !snapshot(alice).players[2]!.connected)
-  check('son siège et ses cartes restent en place', snapshot(alice).players.length === 3)
+  await roomOf('p2').leave(true)
+  await waitFor(() => !seen('p2').connected, 'Chloé déconnectée')
+  check('un départ marque le joueur déconnecté', !seen('p2').connected)
+  check('son siège et ses cartes restent en place', snapshot(table()).players.length === 3)
 
-  const chloeAgain = await client.joinById(alice.roomId, {
+  const chloeAgain = await client.joinById(table().roomId, {
     code: CODE,
     playerId: 'p2',
     name: 'Chloé',
@@ -152,35 +161,86 @@ async function main(): Promise<void> {
   chloeAgain.onMessage('events', () => {})
   chloeAgain.onMessage('rejected', (payload: any) => rejections.push(payload.code))
   rooms[2] = chloeAgain
-  await waitFor(() => snapshot(alice).players[2]!.connected === true, 'Chloé revenue')
-  check('elle retrouve sa place en se reconnectant', snapshot(alice).players[2]!.connected)
+  await waitFor(() => seen('p2').connected, 'Chloé revenue')
+  check('elle retrouve sa place en se reconnectant', seen('p2').connected)
+
+  console.log('\nRôle d’hôte')
+  await roomOf('p0').leave(true)
+  await waitFor(() => !seen('p0').connected, 'Alice déconnectée')
+  await waitFor(
+    () => snapshot(table()).players.some((player) => player.isHost && player.connected),
+    'un hôte présent',
+  )
+  const newHost = snapshot(table()).players.find((player) => player.isHost)!
+  check('le rôle passe à un joueur présent quand l’hôte s’absente', newHost.id !== 'p0')
+  check('… et il n’y a jamais deux hôtes', snapshot(table()).players.filter((p) => p.isHost).length === 1)
+
+  const aliceAgain = await client.joinById(table().roomId, {
+    code: CODE,
+    playerId: 'p0',
+    name: 'Alice',
+  })
+  aliceAgain.onMessage('events', () => {})
+  aliceAgain.onMessage('rejected', (payload: any) => rejections.push(payload.code))
+  rooms[0] = aliceAgain
+  await waitFor(() => seen('p0').connected, 'Alice revenue')
+  check(
+    'à son retour elle retrouve sa place, pas le rôle',
+    snapshot(table()).players.find((player) => player.isHost)!.id === newHost.id,
+  )
 
   console.log('\nPartie complète')
-  let guard = 0
-  while (snapshot(alice).phase === 'playing' && guard++ < 400) {
-    const state = snapshot(alice)
-    const player = state.players.find((p) => p.seat === state.turnSeat)
-    if (!player) break
 
-    const room = rooms[roomPlayerIds.indexOf(player.id)]
-    // Chacun décide depuis sa propre vue — et, comme un humain, sans connaître sa carte.
-    const action = chooseAction(room ? snapshot(room) : state, player.id)
-    if (!room || !action) break
+  /** Joue un tour, au choix de l'IA ou selon une consigne. */
+  async function playTurn(forced?: (playerId: string, opponents: string[]) => Action) {
+    const state = snapshot(table())
+
+    // Au passage : une charge posée ne doit jamais être lisible dans l'état partagé.
     for (const seen of state.players) {
       if (!seen.battery) continue
       sawBattery = true
       if (!isHiddenCard(seen.battery)) leaks.push(`charge lisible dans l'état de ${seen.id}`)
     }
 
-    const versionBefore = (alice.state as any).version
+    const player = state.players.find((p) => p.seat === state.turnSeat)
+    if (!player) return undefined
+
+    const room = roomOf(player.id)
+    const opponents = state.players
+      .filter((other) => other.id !== player.id && other.life.some((card) => card.value > 0))
+      .map((other) => other.id)
+
+    const action = forced?.(player.id, opponents) ?? chooseAction(snapshot(room), player.id)
+    if (!action) return undefined
+
+    const before = (table().state as any).version
     room.send('action', action)
     await waitFor(
-      () => (alice.state as any).version !== versionBefore,
+      () => (table().state as any).version !== before,
       `action ${action.type} de ${player.name}`,
     )
+    return player.id
   }
 
-  const final = snapshot(alice)
+  // Deux coups dictés plutôt que laissés au hasard : sans cela, la charge n'est exercée
+  // que si l'IA décide d'en poser une, et le test réussit ou échoue selon la donne.
+  const charger = await playTurn((playerId) => ({ type: 'charge', targetId: playerId }))
+  let guard = 0
+  while (snapshot(table()).phase === 'playing' && guard++ < 50) {
+    const state = snapshot(table())
+    if (state.players.find((p) => p.seat === state.turnSeat)?.id === charger) break
+    await playTurn()
+  }
+  if (snapshot(table()).phase === 'playing') {
+    await playTurn((playerId, opponents) => ({ type: 'attack', targetId: opponents[0] ?? playerId }))
+  }
+
+  guard = 0
+  while (snapshot(table()).phase === 'playing' && guard++ < 400) {
+    if (!(await playTurn())) break
+  }
+
+  const final = snapshot(table())
   check('la partie se termine', final.phase === 'finished', `phase=${final.phase}`)
   check('un vainqueur est désigné', Boolean(final.winnerId))
   check(
