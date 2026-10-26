@@ -17,6 +17,24 @@ export type Card = {
 
 export type Phase = 'lobby' | 'playing' | 'finished'
 
+/**
+ * Réglages d'une partie, décidés au salon.
+ *
+ * Chaque option est un booléen : on en ajoute une en l'écrivant ici, et le typage
+ * réclame ensuite sa valeur par défaut et sa traduction.
+ */
+export type GameOptions = {
+  /**
+   * Tout le monde ouvre avec exactement les mêmes cartes de vie et le même bouclier.
+   *
+   * La donne cesse d'être une part du résultat : à égalité de départ, ce qui reste est
+   * ce qu'on ose. Les cartes restent distinctes — mêmes valeurs, identifiants propres —
+   * sans quoi deux joueurs partageraient une carte et les dégâts de l'un entameraient
+   * celle de l'autre.
+   */
+  mirrorStart: boolean
+}
+
 export type PlayerState = {
   id: string
   name: string
@@ -42,6 +60,7 @@ export type GameState = {
   rng: number
   /** Compteur d'identifiants de cartes. */
   cardSeq: number
+  options: GameOptions
 }
 
 /**

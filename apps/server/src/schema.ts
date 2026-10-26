@@ -42,9 +42,19 @@ export const PlayerSchema = schema(
 )
 export type PlayerSchema = SchemaType<typeof PlayerSchema>
 
+/** Réglages de la partie. Ils ne changent qu'au salon, mais tout le monde les voit. */
+export const OptionsSchema = schema(
+  {
+    mirrorStart: { type: 'boolean', default: false },
+  },
+  'Options',
+)
+export type OptionsSchema = SchemaType<typeof OptionsSchema>
+
 export const GameSchema = schema(
   {
     code: { type: 'string', default: '' },
+    options: OptionsSchema,
     phase: { type: 'string', default: 'lobby' },
     players: [PlayerSchema],
     turnSeat: { type: 'uint8', default: 0 },

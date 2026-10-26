@@ -7,6 +7,7 @@ import {
   type PlayerState,
 } from './types'
 import { drawCard, drawLifeCards, totalValue } from './cards'
+import { DEFAULT_OPTIONS, toOptions } from './options'
 import { toAvatar } from './avatars'
 import { nextInt } from './rng'
 
@@ -131,7 +132,33 @@ export function isLegal(state: GameState, playerId: string, action: Action): boo
 // ---------------------------------------------------------------------------
 
 export function createGame(seed: number = Date.now()): GameState {
-  return { phase: 'lobby', players: [], turnSeat: 0, rng: seed | 0, cardSeq: 0 }
+  return {
+    phase: 'lobby',
+    players: [],
+    turnSeat: 0,
+    rng: seed | 0,
+    cardSeq: 0,
+    options: { ...DEFAULT_OPTIONS },
+  }
+}
+
+/**
+ * Change les réglages de la partie.
+ *
+ * Les options ne se touchent qu'au salon : les modifier en cours de manche changerait
+ * les règles sous les pieds des joueurs. Au salon, en revanche, la table est resservie
+ * aussitôt — l'aperçu doit dire la vérité, sinon on règle « même départ pour tous » en
+ * regardant des mains qui diffèrent.
+ */
+export function setOptions(state: GameState, patch: unknown): GameState {
+  if (state.phase === 'playing') {
+    throw new IllegalActionError('game-already-started', 'la partie est en cours')
+  }
+
+  const next = structuredClone(state)
+  next.options = toOptions({ ...next.options, ...(patch as object) })
+  if (next.phase === 'lobby') dealTable(next)
+  return next
 }
 
 function dealPlayer(state: GameState, player: PlayerState): void {
@@ -139,6 +166,32 @@ function dealPlayer(state: GameState, player: PlayerState): void {
   player.shield = drawCard(state)
   player.battery = undefined
   player.hasSuperPower = true
+}
+
+/**
+ * Recopie une main, avec des identifiants neufs.
+ *
+ * Les valeurs sont partagées, les cartes non : un identifiant commun ferait d'une
+ * entaille sur la vie de l'un une entaille sur celle de l'autre, puisque c'est par
+ * identifiant que les dégâts désignent leur carte.
+ */
+function cloneHand(state: GameState, from: PlayerState, to: PlayerState): void {
+  to.life = from.life.map((card) => ({ ...card, id: `c${state.cardSeq++}` }))
+  to.shield = { ...from.shield, id: `c${state.cardSeq++}` }
+  to.battery = undefined
+  to.hasSuperPower = true
+}
+
+/** Sert toute la table : une main chacun, ou la même main pour tous. */
+function dealTable(state: GameState): void {
+  const [first, ...rest] = state.players
+  if (!first) return
+
+  dealPlayer(state, first)
+  for (const player of rest) {
+    if (state.options.mirrorStart) cloneHand(state, first, player)
+    else dealPlayer(state, player)
+  }
 }
 
 /** Un salon accepte des arrivants avant la partie, et de nouveau une fois celle-ci finie. */
@@ -173,7 +226,13 @@ export function addPlayer(
     connected: true,
     isHost: next.players.length === 0,
   }
-  dealPlayer(next, player)
+  // Au salon, la main n'est qu'un aperçu : la vraie donne a lieu au lancement. Elle
+  // suit malgré tout l'option, sans quoi un arrivant verrait une main différente des
+  // autres alors que « même départ pour tous » est coché.
+  const reference = next.options.mirrorStart ? next.players[0] : undefined
+  if (reference) cloneHand(next, reference, player)
+  else dealPlayer(next, player)
+
   next.players.push(player)
   return next
 }
@@ -255,7 +314,7 @@ export function startGame(state: GameState): ApplyResult {
 
   // Nouvelles places à chaque manche, puis nouvelle main pour tout le monde.
   shuffleSeats(next)
-  for (const player of next.players) dealPlayer(next, player)
+  dealTable(next)
 
   // Et le siège qui ouvre est lui aussi tiré au sort : « où l'on est assis » et « qui
   // commence » restent deux questions distinctes.

@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { Client, type Room } from 'colyseus.js'
-import type { Action, GameEvent, GameState } from '@pb/engine'
+import type { Action, GameEvent, GameState, OptionKey } from '@pb/engine'
 import { fromWire, type WireGame } from '@pb/engine'
 import { getPlayerId, saveAvatar, saveName } from './identity'
 import { dict, type RejectionCode } from '../i18n'
@@ -90,6 +90,8 @@ type Store = {
   leave: () => Promise<void>
   send: (action: Action) => void
   command: (type: 'start' | 'restart' | 'skip') => void
+  /** Règle une option de partie. Le serveur refusera si l'on n'est pas hôte. */
+  setOption: (key: OptionKey, value: boolean) => void
   kick: (playerId: string) => void
 
   /** Retire le prochain lot à jouer, ou `undefined` s'il n'y a plus rien en attente. */
@@ -258,6 +260,10 @@ export const useGame = create<Store>((set, get) => {
 
     command(type) {
       room?.send(type)
+    },
+
+    setOption(key, value) {
+      room?.send('options', { [key]: value })
     },
 
     kick(playerId) {

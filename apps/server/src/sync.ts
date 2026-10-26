@@ -1,5 +1,5 @@
 import { hiddenCard, isAlive, type Card, type GameState, type PlayerState } from '@pb/engine'
-import { CardSchema, GameSchema, PlayerSchema } from './schema'
+import { CardSchema, GameSchema, OptionsSchema, PlayerSchema } from './schema'
 
 /**
  * Recopie l'état du moteur dans le schéma synchronisé.
@@ -78,8 +78,17 @@ function syncPlayer(node: PlayerSchema, player: PlayerState): void {
   assignOptionalCard(node, 'battery', hide(player.battery, player.id))
 }
 
+function syncOptions(target: GameSchema, source: GameState): void {
+  // La référence n'existe pas tant qu'on ne l'a pas posée : `schema()` ne construit
+  // pas les sous-schémas tout seul.
+  const node = (target.options as OptionsSchema | undefined) ?? new OptionsSchema()
+  if (node.mirrorStart !== source.options.mirrorStart) node.mirrorStart = source.options.mirrorStart
+  if (target.options !== node) target.options = node
+}
+
 export function syncState(target: GameSchema, source: GameState): void {
   if (target.phase !== source.phase) target.phase = source.phase
+  syncOptions(target, source)
   if (target.turnSeat !== source.turnSeat) target.turnSeat = source.turnSeat
 
   const winnerId = source.winnerId ?? ''

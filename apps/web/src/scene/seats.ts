@@ -1,3 +1,5 @@
+import { CARD_HEIGHT, CARD_WIDTH } from './textures'
+
 /**
  * Placement des joueurs autour de la table.
  *
@@ -79,6 +81,74 @@ export function platePosition(
   const [x, , z] = seatPosition(seat, mySeat, total)
   const scale = seatScale(seat === mySeat)
   return [x + Math.sin(angle) * 1.15 * scale, 1.85 * scale, z + Math.cos(angle) * 1.15 * scale]
+}
+
+/**
+ * Disposition d'une main sur son siège.
+ *
+ * Elle vivait dans le composant du siège, qui était seul à en avoir besoin. La
+ * distribution doit maintenant viser exactement les mêmes emplacements : deux copies
+ * de ces mesures se décaleraient au premier ajustement, et les cartes atterriraient à
+ * côté de leur place.
+ */
+
+/** Les cartes sont inclinées vers la caméra : lisibles de partout, mais posées sur la table. */
+export const TILT = -Math.PI / 3.1
+export const CARD_TILT: [number, number, number] = [TILT, 0, 0]
+
+const SPACING = CARD_WIDTH + 0.1
+const ROW_Y = 0.4
+
+/**
+ * Décalage « vers le haut de la carte », dans son propre plan.
+ *
+ * Les cartes étant inclinées, monter d'une carte ne se fait pas le long de l'axe Y du
+ * monde : il faut suivre l'axe Y local, qui plonge aussi vers le fond de la table.
+ */
+function alongCard(distance: number): [number, number] {
+  return [Math.cos(TILT) * distance, Math.sin(TILT) * distance]
+}
+
+export type HandSlot =
+  | { kind: 'life'; index: number }
+  | { kind: 'shield' }
+  | { kind: 'battery' }
+
+/** Demi-largeur de la rangée de vie : tout le reste se place par rapport à elle. */
+function lifeWidth(lifeCount: number): number {
+  return Math.max(0, lifeCount - 1) * SPACING
+}
+
+/** Position d'une carte dans le repère de son siège. */
+export function slotLocal(slot: HandSlot, lifeCount: number): [number, number, number] {
+  const width = lifeWidth(lifeCount)
+  if (slot.kind === 'life') return [slot.index * SPACING - width / 2, ROW_Y, 0]
+  if (slot.kind === 'battery') return [width / 2 + SPACING, ROW_Y, 0]
+
+  const [y, z] = alongCard(CARD_HEIGHT / 2 + CARD_WIDTH / 2 + 0.09)
+  return [0, ROW_Y + y, z]
+}
+
+/** Rayon du halo au sol, qui doit contenir la main entière. */
+export function handRadius(lifeCount: number, hasBattery: boolean): number {
+  const reach = hasBattery
+    ? lifeWidth(lifeCount) / 2 + SPACING + CARD_WIDTH / 2
+    : lifeWidth(lifeCount) / 2
+  return Math.max(1.05, reach + 0.45)
+}
+
+/** Position d'une carte dans la scène, siège et échelle compris. */
+export function slotWorld(
+  seat: number,
+  mySeat: number,
+  total: number,
+  slot: HandSlot,
+  lifeCount: number,
+): [number, number, number] {
+  const [x, , z] = seatPosition(seat, mySeat, total)
+  const scale = seatScale(seat === mySeat)
+  const [lx, ly, lz] = slotLocal(slot, lifeCount)
+  return [x + lx * scale, ly * scale, z + lz * scale]
 }
 
 /** Où se pose la carte piochée : au centre, au-dessus du paquet. */

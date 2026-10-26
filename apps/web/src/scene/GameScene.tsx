@@ -8,6 +8,7 @@ import { Card3D } from './Card3D'
 import { Particles } from './Particles'
 import { Projectile } from './Projectile'
 import { Combination } from './Combination'
+import { Dealing } from './Dealing'
 import { CameraRig } from './CameraRig'
 import { CARD_THICKNESS } from './textures'
 import { DECK_POSITION, layout, seatColor, setLayout } from './seats'
@@ -140,6 +141,7 @@ export function GameScene({ game, mySeat, compact, selectableIds, onSelectTarget
       <Deck />
       <RevealedCard />
       <Combination mySeat={mySeat} total={total} />
+      <Dealing mySeat={mySeat} total={total} />
       <Projectile />
       {!degraded && <Particles color={accent} />}
 

@@ -2,29 +2,19 @@ import { useMemo, useRef } from 'react'
 import { useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
 import type { PlayerState } from '@pb/engine'
-import { impactDecay, useStage } from './stage'
+import { dealProgress, dealRank, impactDecay, useStage } from './stage'
 import { useCountdown } from './useCountdown'
 import { useSettings } from '../settings'
 import { Card3D } from './Card3D'
-import { seatAngle, seatColor, seatPosition, seatScale } from './seats'
-import { CARD_HEIGHT, CARD_WIDTH } from './textures'
-
-/** Les cartes sont inclinées vers la caméra : lisibles de partout, mais posées sur la table. */
-const TILT = -Math.PI / 3.1
-const CARD_TILT: [number, number, number] = [TILT, 0, 0]
-
-const SPACING = CARD_WIDTH + 0.1
-const ROW_Y = 0.4
-
-/**
- * Décalage « vers le haut de la carte », dans son propre plan.
- *
- * Les cartes étant inclinées, monter d'une carte ne se fait pas le long de l'axe Y du
- * monde : il faut suivre l'axe Y local, qui plonge aussi vers le fond de la table.
- */
-function alongCard(distance: number): [number, number] {
-  return [Math.cos(TILT) * distance, Math.sin(TILT) * distance]
-}
+import {
+  CARD_TILT,
+  handRadius,
+  seatAngle,
+  seatColor,
+  seatPosition,
+  seatScale,
+  slotLocal,
+} from './seats'
 
 type Props = {
   player: PlayerState
@@ -63,12 +53,9 @@ export function PlayerSeat({
   const life = useCountdown(player.life)
 
   // Disposition : les cartes de vie côte à côte, le bouclier posé en travers au-dessus,
-  // et la charge éventuelle face cachée sur le côté.
-  const lifeWidth = Math.max(0, life.length - 1) * SPACING
-  const [shieldY, shieldZ] = alongCard(CARD_HEIGHT / 2 + CARD_WIDTH / 2 + 0.09)
-  const batteryX = lifeWidth / 2 + SPACING
-
-  const halo = Math.max(1.05, (player.battery ? batteryX + CARD_WIDTH / 2 : lifeWidth / 2) + 0.45)
+  // et la charge éventuelle face cachée sur le côté. Les mesures viennent de `seats`,
+  // que la distribution consulte elle aussi pour viser les mêmes emplacements.
+  const halo = handRadius(life.length, Boolean(player.battery))
   const dimmed = !alive
 
   // Vrai quand cette charge est justement en train d'être dépensée dans une attaque.
@@ -78,13 +65,33 @@ export function PlayerSeat({
 
   const cards = useRef<THREE.Group>(null)
   const glow = useRef<THREE.MeshBasicMaterial>(null)
+  /**
+   * Emplacements servis par la distribution : les cartes de vie, puis le bouclier.
+   *
+   * Pendant la donne, chacun reste invisible jusqu'à ce que la carte qui l'apporte ait
+   * atterri — c'est ce qui fait qu'on la voit arriver au lieu d'apparaître. Le bouclier
+   * a sa propre référence plutôt qu'une case en fin de tableau : son rang dépend du
+   * nombre de cartes de vie, et ce nombre change précisément quand la donne commence.
+   */
+  const lifeSlots = useRef<(THREE.Group | null)[]>([])
+  const shieldSlot = useRef<THREE.Group>(null)
   // Chaque siège respire à son propre rythme : en phase, la table aurait l'air mécanique.
   const phase = useMemo(() => Math.random() * Math.PI * 2, [])
 
   useFrame((state) => {
-    const { impactAt, impactPower, impactSeat } = useStage.getState()
+    const { impactAt, impactPower, impactSeat, deal } = useStage.getState()
     const { reducedMotion } = useSettings.getState()
     const time = state.clock.elapsedTime
+
+    const now = performance.now()
+    const served = (round: number) =>
+      !deal || dealProgress(deal, dealRank(deal, player.seat, round), now) >= 1
+
+    lifeSlots.current.forEach((node, index) => {
+      if (node) node.visible = served(index)
+    })
+    // Le bouclier est servi en dernier, au tour qui suit la dernière carte de vie.
+    if (shieldSlot.current) shieldSlot.current.visible = served(life.length)
 
     if (cards.current) {
       const breath = reducedMotion ? 0 : Math.sin(time * 0.9 + phase)
@@ -142,25 +149,33 @@ export function PlayerSeat({
 
       <group ref={cards}>
       {/* Bouclier : en travers, au-dessus de la vie. */}
-      <Card3D
-        card={player.shield}
-        role="shield"
-        orientation="landscape"
-        position={[0, ROW_Y + shieldY, shieldZ]}
-        rotation={CARD_TILT}
-        dimmed={dimmed}
-      />
-
-      {/* Cartes de vie, côte à côte. */}
-      {life.map((card, index) => (
+      <group ref={shieldSlot}>
         <Card3D
-          key={card.id}
-          card={card}
-          role="life"
-          position={[index * SPACING - lifeWidth / 2, ROW_Y, 0]}
+          card={player.shield}
+          role="shield"
+          orientation="landscape"
+          position={slotLocal({ kind: 'shield' }, life.length)}
           rotation={CARD_TILT}
           dimmed={dimmed}
         />
+      </group>
+
+      {/* Cartes de vie, côte à côte. */}
+      {life.map((card, index) => (
+        <group
+          key={card.id}
+          ref={(node) => {
+            lifeSlots.current[index] = node
+          }}
+        >
+          <Card3D
+            card={card}
+            role="life"
+            position={slotLocal({ kind: 'life', index }, life.length)}
+            rotation={CARD_TILT}
+            dimmed={dimmed}
+          />
+        </group>
       ))}
 
       {/* La charge se montre face cachée : on sait qu'elle est là, pas ce qu'elle vaut.
@@ -171,7 +186,7 @@ export function PlayerSeat({
           card={player.battery}
           role="battery"
           faceDown
-          position={[batteryX, ROW_Y, 0]}
+          position={slotLocal({ kind: 'battery' }, life.length)}
           rotation={CARD_TILT}
           dimmed={dimmed}
         />

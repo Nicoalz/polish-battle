@@ -13,6 +13,7 @@ import {
   findPlayer,
   removePlayer,
   setConnected,
+  setOptions,
   skipTurn,
   startGame,
   transferHost,
@@ -80,6 +81,7 @@ export class GameRoom extends Room<GameSchema> {
     this.onMessage('restart', (client) => this.handleRestart(client))
     this.onMessage('skip', (client) => this.handleHostSkip(client))
     this.onMessage('kick', (client, message) => this.handleKick(client, message))
+    this.onMessage('options', (client, message) => this.handleOptions(client, message))
     this.onMessage('action', (client, message) => this.handleAction(client, message))
 
     // On ne marque surtout pas le salon privé au sens de Colyseus : cela le retirerait
@@ -163,6 +165,18 @@ export class GameRoom extends Room<GameSchema> {
   private handleHostSkip(client: Client): void {
     if (!this.requireHost(client)) return
     this.run(client, () => skipTurn(this.game))
+  }
+
+  /**
+   * Règle une option de partie.
+   *
+   * Aucun événement n'en sort : un réglage n'est pas un coup, il n'a rien à raconter.
+   * L'état suffit, et il part dans la foulée par la synchro habituelle.
+   */
+  private handleOptions(client: Client, message: unknown): void {
+    if (!this.requireHost(client)) return
+    if (typeof message !== 'object' || message === null) return
+    this.run(client, () => ({ state: setOptions(this.game, message), events: [] }))
   }
 
   private handleKick(client: Client, message: unknown): void {

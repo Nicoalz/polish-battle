@@ -255,6 +255,24 @@ Conséquences, en cascade :
 - Super-pouvoir unique par partie, inaccessible une fois la carte piochée.
 - Cibler n'importe quel joueur vivant, soi-même compris.
 
+## Options de partie
+
+Réglées au salon, par l'hôte, visibles de toute la table. Elles ne bougent plus une fois
+la manche lancée : changer les règles en cours de partie reviendrait à les changer sous
+les pieds des joueurs.
+
+| Option | Par défaut | Effet |
+|---|---|---|
+| **Même départ pour tous** | éteinte | Tout le monde ouvre avec les mêmes valeurs de cartes de vie et le même bouclier |
+
+Les cartes restent distinctes malgré des valeurs communes : elles portent chacune leur
+identifiant, sans quoi deux joueurs partageraient une carte et l'entaille de l'un
+abîmerait celle de l'autre — c'est par identifiant que les dégâts désignent leur cible.
+
+Au salon, la main affichée n'est qu'un aperçu : la vraie donne a lieu au lancement. Elle
+suit malgré tout l'option, et la table est resservie dès qu'on la change — sans quoi on
+réglerait « même départ pour tous » en regardant des mains qui diffèrent.
+
 ## Corrections
 
 | # | v1 | v2 |

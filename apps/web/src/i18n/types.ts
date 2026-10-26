@@ -1,4 +1,4 @@
-import type { ActionType, AvatarId, IllegalActionCode } from '@pb/engine'
+import type { ActionType, AvatarId, IllegalActionCode, OptionKey } from '@pb/engine'
 
 /** Motifs de refus : ceux du moteur, plus ceux propres au serveur. */
 export type RejectionCode =
@@ -98,6 +98,14 @@ export type Dict = {
     readonly music: string
     readonly reducedMotion: string
     readonly reducedMotionHint: string
+  }
+
+  readonly options: {
+    readonly title: string
+    readonly hostOnly: string
+    /** Une étiquette et une explication par option : le typage réclame les deux. */
+    readonly labels: Readonly<Record<OptionKey, string>>
+    readonly hints: Readonly<Record<OptionKey, string>>
   }
 
   readonly actions: Readonly<Record<ActionType, string>>

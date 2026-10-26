@@ -1,4 +1,5 @@
 import { drawCard } from '../src/cards'
+import { DEFAULT_OPTIONS } from '../src/options'
 import type { Card, GameState, PlayerState } from '../src/types'
 
 let sequence = 0
@@ -43,6 +44,7 @@ export function game(players: PlayerState[], overrides: Partial<GameState> = {})
     turnSeat: 0,
     rng: 12345,
     cardSeq: 1000,
+    options: { ...DEFAULT_OPTIONS },
     ...overrides,
   }
 }

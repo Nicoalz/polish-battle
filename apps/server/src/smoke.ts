@@ -124,6 +124,34 @@ async function main(): Promise<void> {
   check('les suivants ne le sont pas', lobby.players.slice(1).every((p) => !p.isHost))
   check('les cartes sont bien reçues', lobby.players[0]!.life.length === 2)
 
+  console.log('\nOptions de partie')
+  /** Résumé d'une main : ses valeurs, sans ses identifiants, qui diffèrent toujours. */
+  const hands = () =>
+    snapshot(table()).players.map((p) => [...p.life.map((c) => c.value), p.shield.value].join('-'))
+
+  check('elles partent par défaut éteintes', snapshot(table()).options.mirrorStart === false)
+
+  roomOf('p0').send('options', { mirrorStart: true })
+  await waitFor(() => snapshot(table()).options.mirrorStart, 'option reçue')
+  check('l’hôte peut les changer', snapshot(table()).options.mirrorStart === true)
+  check(
+    '… et la table est resservie aussitôt, à l’identique',
+    new Set(hands()).size === 1,
+    hands().join(' / '),
+  )
+
+  const beforeOptions = rejections.length
+  roomOf('p1').send('options', { mirrorStart: false })
+  await new Promise((resolve) => setTimeout(resolve, 300))
+  check(
+    'un non-hôte ne peut pas les changer',
+    rejections.length > beforeOptions && snapshot(table()).options.mirrorStart === true,
+  )
+
+  // On rend la donne au hasard pour la suite : c'est la partie ordinaire qu'on teste.
+  roomOf('p0').send('options', { mirrorStart: false })
+  await waitFor(() => !snapshot(table()).options.mirrorStart, 'option rendue')
+
   console.log('\nAutorité du serveur')
   roomOf('p1').send('start')
   await new Promise((resolve) => setTimeout(resolve, 300))

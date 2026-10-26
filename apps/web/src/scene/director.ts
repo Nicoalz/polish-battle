@@ -3,7 +3,7 @@ import type { Card, GameState } from '@pb/engine'
 import { useGame, type Batch } from '../net/store'
 import { useSettings } from '../settings'
 import { playSfx, vibrate, type Sfx } from '../audio/synth'
-import { useStage } from './stage'
+import { DEAL_PENDING, dealCount, useStage, type Deal } from './stage'
 import { DECK_POSITION, DRAWN_CARD_POSITION, seatAnchor } from './seats'
 
 /**
@@ -26,6 +26,10 @@ const DURATIONS = {
   superFlight: 640,
   settle: 420,
   victory: 700,
+  /** Intervalle entre deux cartes servies. */
+  dealCard: 85,
+  /** Durée du vol d'une carte distribuée. */
+  dealFlight: 330,
 } as const
 
 /** Budget maximal d'attente pour une action, au-delà duquel on rattrape sans attendre. */
@@ -92,6 +96,9 @@ export function useDirector(mySeat: number, total: number): void {
         stage.setFlight(undefined)
         stage.setReveal(undefined)
         stage.setCombination(undefined)
+        // Sans ce filet, une donne interrompue laisserait la table vide : les sièges ne
+        // montrent leurs cartes qu'une fois l'horloge de distribution retirée.
+        stage.setDeal(undefined)
         // Rattrapage de sécurité : on valide la dernière version effectivement reçue.
         commit(useGame.getState().version)
         setAnimating(false)
@@ -99,6 +106,60 @@ export function useDirector(mySeat: number, total: number): void {
       }
     })()
   }, [queued, mySeat, total])
+}
+
+/**
+ * Sert la table.
+ *
+ * Le rideau tombe d'abord — sinon la nouvelle donne apparaît d'un bloc le temps d'une
+ * image, avant même qu'on sache quoi distribuer. L'état est ensuite validé, et seule
+ * l'horloge de distribution décide de ce qui est déjà posé.
+ *
+ * L'attente échappe au budget des autres mises en scène : celui-ci existe pour ne pas
+ * prendre de retard sur une file d'actions, or une donne n'arrive qu'une fois par manche
+ * et n'a rien derrière elle.
+ */
+async function dealOut(
+  instant: boolean,
+  scale: number,
+  commit: () => Promise<void>,
+): Promise<void> {
+  const stage = useStage.getState()
+
+  if (instant) {
+    await commit()
+    return
+  }
+
+  stage.setDeal(DEAL_PENDING)
+  await commit()
+
+  const table = useGame.getState().display
+  const players = table?.players.length ?? 0
+  const lifeCount = table?.players[0]?.life.length ?? 0
+  if (players === 0 || lifeCount === 0) {
+    stage.setDeal(undefined)
+    return
+  }
+
+  const deal: Deal = {
+    startedAt: performance.now(),
+    perCard: DURATIONS.dealCard * scale,
+    flight: DURATIONS.dealFlight * scale,
+    players,
+    // On sert d'abord celui qui ouvrira : la distribution annonce déjà qui commence.
+    firstSeat: table?.turnSeat ?? 0,
+    lifeCount,
+  }
+  stage.setDeal(deal)
+
+  for (let rank = 0; rank < dealCount(deal); rank++) {
+    playSfx('place')
+    await wait(deal.perCard)
+  }
+  await wait(deal.flight)
+
+  stage.setDeal(undefined)
 }
 
 /**
@@ -138,12 +199,19 @@ async function play(batch: Batch, mySeat: number, total: number): Promise<void> 
     useGame.getState().remember(events)
   }
 
+  const started = events.find((event) => event.t === 'game-started')
   const attack = events.find((event) => event.t === 'attack-resolved')
   const superUsed = events.find((event) => event.t === 'super-used')
   const shield = events.find((event) => event.t === 'shield-set')
   const charge = events.find((event) => event.t === 'battery-set')
   const drawn = events.find((event) => event.t === 'drawn')
   const won = events.find((event) => event.t === 'game-won')
+
+  // Début de manche : on sert la table carte par carte au lieu de la faire apparaître.
+  if (started) {
+    await dealOut(instant, scale, commit)
+    return
+  }
 
   if (superUsed) {
     sound('super')

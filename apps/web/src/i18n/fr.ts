@@ -104,6 +104,17 @@ export const fr: Dict = {
     scarf: 'Foulard',
   },
 
+  options: {
+    title: 'Options de partie',
+    hostOnly: 'Seul l’hôte peut les changer.',
+    labels: {
+      mirrorStart: 'Même départ pour tous',
+    },
+    hints: {
+      mirrorStart: 'Tout le monde commence avec les mêmes cartes de vie et le même bouclier.',
+    },
+  },
+
   actions: {
     attack: 'Attaquer',
     shield: 'Changer le bouclier de',

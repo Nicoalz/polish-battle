@@ -104,6 +104,17 @@ export const en: Dict = {
     scarf: 'Headscarf',
   },
 
+  options: {
+    title: 'Game options',
+    hostOnly: 'Only the host can change these.',
+    labels: {
+      mirrorStart: 'Same start for everyone',
+    },
+    hints: {
+      mirrorStart: 'Everyone begins with the same life cards and the same shield.',
+    },
+  },
+
   actions: {
     attack: 'Attack',
     shield: 'Replace the shield of',

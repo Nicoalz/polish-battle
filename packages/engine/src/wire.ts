@@ -1,3 +1,4 @@
+import { toOptions } from './options'
 import type { Card, GameState, PlayerState } from './types'
 
 /**
@@ -24,6 +25,8 @@ export type WirePlayer = {
   isHost: boolean
 }
 
+export type WireOptions = { mirrorStart: boolean }
+
 export type WireGame = {
   code: string
   phase: string
@@ -31,6 +34,7 @@ export type WireGame = {
   turnSeat: number
   winnerId: string
   version: number
+  options?: WireOptions
 }
 
 /** Emplacements dont la carte est remplacée par un jeton avant d'être transmise. */
@@ -88,5 +92,8 @@ export function fromWire(raw: WireGame): GameState {
     winnerId: raw.winnerId || undefined,
     rng: 0,
     cardSeq: 0,
+    // Un salon d'une version antérieure peut ne rien dire de ses options : on retombe
+    // alors sur les valeurs par défaut plutôt que sur un état incomplet.
+    options: toOptions(raw.options),
   }
 }

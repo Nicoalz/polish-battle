@@ -7,6 +7,7 @@ import { useIsCompact } from './useViewport'
 import { GameScene } from './scene/GameScene'
 import { Nameplate } from './Nameplate'
 import { Avatar } from './Avatar'
+import { GameOptions } from './GameOptions'
 import { History } from './History'
 import { TurnClock } from './TurnClock'
 import { seatColor } from './scene/seats'
@@ -33,7 +34,7 @@ const ACTION_ORDER: ActionType[] = [
  * des coups que le serveur vient de consommer.
  */
 export function GameView({ game, display }: { game: GameState; display: GameState }) {
-  const { playerId, code, send, command, leave } = useGame()
+  const { playerId, code, send, command, setOption, leave } = useGame()
   const t = useI18n((state) => state.t)
   const [pending, setPending] = useState<ActionType | null>(null)
 
@@ -187,6 +188,19 @@ export function GameView({ game, display }: { game: GameState; display: GameStat
           </div>
         )}
       </header>
+
+      {/* ------------------------------ options de partie ------------------------------ */}
+      {display.phase === 'lobby' && (
+        // Calé à gauche plutôt qu'au centre : au centre, le panneau couvre la main du
+        // joueur local, et c'est justement elle qu'on regarde pour juger de l'option.
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 z-30 flex justify-start p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:p-4">
+          <GameOptions
+            options={display.options}
+            canEdit={Boolean(me?.isHost)}
+            onChange={setOption}
+          />
+        </div>
+      )}
 
       {/* ------------------------------ barre d'action ------------------------------ */}
       {types.length > 0 && (
