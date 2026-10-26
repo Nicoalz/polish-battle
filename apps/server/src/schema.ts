@@ -35,8 +35,6 @@ export const PlayerSchema = schema(
     hasSuperPower: 'boolean',
     connected: 'boolean',
     isHost: 'boolean',
-    /** Dérivé de la somme des cartes de vie : évite de le recalculer côté client. */
-    alive: 'boolean',
   },
   'Player',
 )

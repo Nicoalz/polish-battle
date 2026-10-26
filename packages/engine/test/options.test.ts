@@ -73,17 +73,14 @@ describe('le départ en miroir (option « même départ pour tous »)', () => {
       .toEqual(before)
   })
 
-  it('sert aussi l’arrivant du salon sur le même modèle', () => {
-    // L'aperçu du salon doit dire la vérité : sinon on coche l'option en regardant
-    // des mains qui diffèrent.
-    const state = table(11, true)
-    expect(new Set(hands(state)).size).toBe(1)
-  })
+  it('se règle dans n’importe quel ordre', () => {
+    // Personne n'est servi au salon : cocher l'option avant ou après l'arrivée des
+    // joueurs revient au même, puisque la donne n'a lieu qu'au lancement.
+    let late = createGame(11)
+    for (const id of ['a', 'b', 'c', 'd']) late = addPlayer(late, { id, name: id })
+    late = setOptions(late, { mirrorStart: true })
 
-  it('resert la table quand on change d’avis au salon', () => {
-    const before = table(11, false)
-    expect(new Set(hands(before)).size).toBeGreaterThan(1)
-    expect(new Set(hands(setOptions(before, { mirrorStart: true }))).size).toBe(1)
+    expect(hands(startGame(late).state)).toEqual(hands(startGame(table(11, true)).state))
   })
 })
 

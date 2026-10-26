@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { isAlive, legalActions, type Action, type ActionType, type GameState } from '@pb/engine'
+import { isStanding, legalActions, type Action, type ActionType, type GameState } from '@pb/engine'
 import { useGame } from '../net/store'
 import { useI18n } from '../i18n'
 import { describeAction, describeRejection } from '../i18n/history'
@@ -61,7 +61,7 @@ export function DebugTable({ game }: { game: GameState }) {
 
       <ul className="mb-6 grid gap-2 sm:grid-cols-2">
         {game.players.map((player) => {
-          const alive = isAlive(player)
+          const alive = isStanding(player)
           const isTurn = player.seat === game.turnSeat && game.phase === 'playing'
           return (
             <li

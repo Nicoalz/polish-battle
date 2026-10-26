@@ -22,6 +22,8 @@ type Props = {
   total: number
   isMe: boolean
   isTurn: boolean
+  /** Faux au salon : les places sont là, les mains pas encore. */
+  dealt: boolean
   alive: boolean
   selectable: boolean
   onSelect: (playerId: string) => void
@@ -33,6 +35,7 @@ export function PlayerSeat({
   total,
   isMe,
   isTurn,
+  dealt,
   alive,
   selectable,
   onSelect,
@@ -147,6 +150,7 @@ export function PlayerSeat({
         </mesh>
       )}
 
+      {dealt && (
       <group ref={cards}>
       {/* Bouclier : en travers, au-dessus de la vie. */}
       <group ref={shieldSlot}>
@@ -192,6 +196,7 @@ export function PlayerSeat({
         />
       )}
       </group>
+      )}
 
     </group>
   )

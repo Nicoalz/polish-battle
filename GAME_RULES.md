@@ -269,9 +269,10 @@ Les cartes restent distinctes malgré des valeurs communes : elles portent chacu
 identifiant, sans quoi deux joueurs partageraient une carte et l'entaille de l'un
 abîmerait celle de l'autre — c'est par identifiant que les dégâts désignent leur cible.
 
-Au salon, la main affichée n'est qu'un aperçu : la vraie donne a lieu au lancement. Elle
-suit malgré tout l'option, et la table est resservie dès qu'on la change — sans quoi on
-réglerait « même départ pour tous » en regardant des mains qui diffèrent.
+**Rien n'est distribué au salon.** La donne a lieu au lancement, et elle resservirait de
+toute façon tout le monde : servir plus tôt ne ferait qu'afficher des cartes vouées à
+changer, et avancer la graine sur des cartes que personne ne joue. Les places sont donc
+visibles avant la partie, les mains non.
 
 ## Corrections
 

@@ -1,4 +1,4 @@
-import { hiddenCard, isAlive, type Card, type GameState, type PlayerState } from '@pb/engine'
+import { hiddenCard, type Card, type GameState, type PlayerState } from '@pb/engine'
 import { CardSchema, GameSchema, OptionsSchema, PlayerSchema } from './schema'
 
 /**
@@ -63,9 +63,6 @@ function syncPlayer(node: PlayerSchema, player: PlayerState): void {
   if (node.hasSuperPower !== player.hasSuperPower) node.hasSuperPower = player.hasSuperPower
   if (node.connected !== player.connected) node.connected = player.connected
   if (node.isHost !== player.isHost) node.isHost = player.isHost
-
-  const alive = isAlive(player)
-  if (node.alive !== alive) node.alive = alive
 
   syncCards(node.life, player.life)
 

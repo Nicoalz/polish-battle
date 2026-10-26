@@ -2,7 +2,7 @@ import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { AdaptiveDpr, ContactShadows, PerformanceMonitor } from '@react-three/drei'
 import { useState } from 'react'
 import type { GameState } from '@pb/engine'
-import { isAlive } from '@pb/engine'
+import { isDealt, isStanding } from '@pb/engine'
 import { PlayerSeat } from './PlayerSeat'
 import { Card3D } from './Card3D'
 import { Particles } from './Particles'
@@ -153,7 +153,10 @@ export function GameScene({ game, mySeat, compact, selectableIds, onSelectTarget
           total={total}
           isMe={player.seat === mySeat}
           isTurn={player.seat === game.turnSeat && game.phase === 'playing'}
-          alive={isAlive(player)}
+          // Un siège ne montre de cartes que s'il en a reçu : au salon personne n'est
+          // servi, et un arrivant d'entre deux manches attend la manche suivante.
+          dealt={isDealt(player)}
+          alive={isStanding(player)}
           selectable={selectableIds.has(player.id)}
           onSelect={onSelectTarget}
         />

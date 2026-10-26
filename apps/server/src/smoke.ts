@@ -122,7 +122,10 @@ async function main(): Promise<void> {
   check('les 3 joueurs rejoignent le même salon', lobby.players.length === 3)
   check('le premier arrivant est hôte', lobby.players[0]!.isHost === true)
   check('les suivants ne le sont pas', lobby.players.slice(1).every((p) => !p.isHost))
-  check('les cartes sont bien reçues', lobby.players[0]!.life.length === 2)
+  check(
+    'personne n’est servi avant le lancement',
+    lobby.players.every((p) => p.life.length === 0),
+  )
 
   console.log('\nOptions de partie')
   /** Résumé d'une main : ses valeurs, sans ses identifiants, qui diffèrent toujours. */
@@ -134,11 +137,6 @@ async function main(): Promise<void> {
   roomOf('p0').send('options', { mirrorStart: true })
   await waitFor(() => snapshot(table()).options.mirrorStart, 'option reçue')
   check('l’hôte peut les changer', snapshot(table()).options.mirrorStart === true)
-  check(
-    '… et la table est resservie aussitôt, à l’identique',
-    new Set(hands()).size === 1,
-    hands().join(' / '),
-  )
 
   const beforeOptions = rejections.length
   roomOf('p1').send('options', { mirrorStart: false })
@@ -148,9 +146,8 @@ async function main(): Promise<void> {
     rejections.length > beforeOptions && snapshot(table()).options.mirrorStart === true,
   )
 
-  // On rend la donne au hasard pour la suite : c'est la partie ordinaire qu'on teste.
-  roomOf('p0').send('options', { mirrorStart: false })
-  await waitFor(() => !snapshot(table()).options.mirrorStart, 'option rendue')
+  // L'option reste allumée : c'est au lancement qu'elle se vérifie, pas au salon, et
+  // la suite de la partie se joue aussi bien à mains égales.
 
   console.log('\nAutorité du serveur')
   roomOf('p1').send('start')
@@ -164,6 +161,11 @@ async function main(): Promise<void> {
   roomOf('p0').send('start')
   await waitFor(() => snapshot(table()).phase === 'playing', 'partie démarrée')
   check("l'hôte peut lancer la partie", snapshot(table()).phase === 'playing')
+  check(
+    '… et le départ en miroir sert la même main à tout le monde',
+    new Set(hands()).size === 1,
+    hands().join(' / '),
+  )
 
   const before = rejections.length
   const notMyTurn = snapshot(table()).turnSeat === 0 ? roomOf('p1') : roomOf('p0')

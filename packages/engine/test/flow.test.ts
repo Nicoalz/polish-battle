@@ -3,6 +3,9 @@ import {
   IllegalActionError,
   MAX_PLAYERS,
   addPlayer,
+  isAlive,
+  isDealt,
+  isStanding,
   applyAction,
   createGame,
   legalActions,
@@ -148,10 +151,49 @@ describe('le salon et la mise en place (GAME_RULES §3)', () => {
     expect(state.players[0]).toMatchObject({ id: 'b', isHost: true, seat: 0 })
   })
 
-  it('ne consomme que les trois cartes servies', () => {
+  it('ne tient pas pour éliminé un joueur pas encore servi', () => {
+    // Sans cette nuance, toute la table serait barrée au salon — et un arrivant
+    // d'entre deux manches naîtrait mort.
+    let state = createGame(1)
+    state = addPlayer(state, { id: 'a', name: 'Alice' })
+    const waiting = state.players[0]!
+
+    expect(isDealt(waiting)).toBe(false)
+    expect(isAlive(waiting)).toBe(false)
+    expect(isStanding(waiting)).toBe(true)
+  })
+
+  it('sert l’arrivant d’entre deux manches à la manche suivante', () => {
+    let state = createGame(1)
+    for (const id of ['a', 'b']) state = addPlayer(state, { id, name: id })
+    state = startGame(state).state
+    state = { ...state, phase: 'finished' }
+    state = addPlayer(state, { id: 'c', name: 'c' })
+
+    expect(isDealt(state.players[2]!)).toBe(false)
+    expect(state.players.every((p) => isDealt(p))).toBe(false)
+    expect(startGame(state).state.players.every((p) => isDealt(p) && isAlive(p))).toBe(true)
+  })
+
+  it('ne sert personne avant le lancement', () => {
+    // Rien n'est tiré au salon : tout serait resservi au démarrage, et la graine
+    // avancerait sur des cartes que personne ne joue.
     const state = createGame(1)
     const after = addPlayer(state, { id: 'a', name: 'Alice' })
-    expect(after.cardSeq - state.cardSeq).toBe(3)
+
+    expect(after.cardSeq).toBe(state.cardSeq)
+    expect(after.rng).toBe(state.rng)
+    expect(after.players[0]!.life).toEqual([])
+  })
+
+  it('recale le tour sur un siège valide quand un joueur quitte le salon', () => {
+    // Personne n'étant « vivant » au salon, le repli du recalage pouvait renvoyer -1 —
+    // et un siège négatif ne passe pas l'encodage réseau.
+    let state = createGame(1)
+    for (const id of ['a', 'b']) state = addPlayer(state, { id, name: id })
+    const after = removePlayer(state, 'a')
+
+    expect(after.turnSeat).toBe(0)
   })
 
   it('sert deux cartes de vie, un bouclier et un super-pouvoir à chacun', () => {

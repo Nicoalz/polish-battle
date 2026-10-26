@@ -24,6 +24,15 @@ export const SUPER_POWER_FLOOR = 8
  * pose son téléphone fait attendre tout le monde sans recours. Le délai est partagé avec
  * le client, qui s'en sert pour afficher le décompte — les deux doivent dire la même chose.
  */
+/**
+ * Place tenue par une carte qui n'existe pas encore.
+ *
+ * Le bouclier n'est pas facultatif dans le type : il l'est une poignée de secondes, entre
+ * l'arrivée au salon et la donne. Un emplacement nommé vaut mieux qu'un littéral
+ * disséminé, parce que c'est à lui qu'on reconnaît un joueur pas encore servi.
+ */
+export const NO_CARD: Card = { id: '', rank: 0, value: 0 }
+
 export const TURN_LIMIT_MS = 90_000
 
 /** Un joueur dont l'onglet est fermé n'a pas besoin d'autant : on ne l'attend pas. */
@@ -54,6 +63,27 @@ export class IllegalActionError extends Error {
 // ---------------------------------------------------------------------------
 // Lectures
 // ---------------------------------------------------------------------------
+
+/**
+ * Ce joueur a-t-il reçu sa main ?
+ *
+ * Faux au salon, et faux aussi pour qui rejoint entre deux manches : la donne n'a lieu
+ * qu'au lancement. Le bouclier tient alors la place d'une carte à venir, et c'est à
+ * cela qu'on le reconnaît.
+ */
+export function isDealt(player: PlayerState): boolean {
+  return player.shield.id !== NO_CARD.id
+}
+
+/**
+ * Ce joueur est-il encore en lice ?
+ *
+ * Qui n'a pas été servi n'est pas éliminé : il attend. Sans cette nuance, toute la
+ * table serait barrée au salon, et un arrivant d'entre deux manches naîtrait mort.
+ */
+export function isStanding(player: PlayerState): boolean {
+  return !isDealt(player) || isAlive(player)
+}
 
 export function isAlive(player: PlayerState): boolean {
   return totalValue(player.life) > 0
@@ -146,9 +176,7 @@ export function createGame(seed: number = Date.now()): GameState {
  * Change les réglages de la partie.
  *
  * Les options ne se touchent qu'au salon : les modifier en cours de manche changerait
- * les règles sous les pieds des joueurs. Au salon, en revanche, la table est resservie
- * aussitôt — l'aperçu doit dire la vérité, sinon on règle « même départ pour tous » en
- * regardant des mains qui diffèrent.
+ * les règles sous les pieds des joueurs.
  */
 export function setOptions(state: GameState, patch: unknown): GameState {
   if (state.phase === 'playing') {
@@ -157,7 +185,6 @@ export function setOptions(state: GameState, patch: unknown): GameState {
 
   const next = structuredClone(state)
   next.options = toOptions({ ...next.options, ...(patch as object) })
-  if (next.phase === 'lobby') dealTable(next)
   return next
 }
 
@@ -212,27 +239,21 @@ export function addPlayer(
   }
 
   const next = structuredClone(state)
-  // `dealPlayer` sert la main complète juste après : le bouclier du littéral n'est
-  // qu'un provisoire, et le tirer ici gaspillerait une carte et ferait avancer la
-  // graine sur une carte que personne ne voit.
+  // Personne n'est servi au salon : la donne a lieu au lancement, et elle resservirait
+  // de toute façon tout le monde. Tirer des cartes ici ne ferait qu'avancer la graine
+  // sur des cartes que personne ne joue. Le bouclier tient donc la place d'une carte à
+  // venir — c'est le seul moment où un joueur n'en a pas.
   const player: PlayerState = {
     id,
     name,
     avatar: toAvatar(avatar),
     seat: next.players.length,
     life: [],
-    shield: { id: '', rank: 0, value: 0 },
+    shield: { ...NO_CARD },
     hasSuperPower: true,
     connected: true,
     isHost: next.players.length === 0,
   }
-  // Au salon, la main n'est qu'un aperçu : la vraie donne a lieu au lancement. Elle
-  // suit malgré tout l'option, sans quoi un arrivant verrait une main différente des
-  // autres alors que « même départ pour tous » est coché.
-  const reference = next.options.mirrorStart ? next.players[0] : undefined
-  if (reference) cloneHand(next, reference, player)
-  else dealPlayer(next, player)
-
   next.players.push(player)
   return next
 }
@@ -253,7 +274,8 @@ export function removePlayer(state: GameState, playerId: string): GameState {
 
   // La renumérotation décale tout le monde : sans recalage, `turnSeat` désigne un autre
   // joueur que celui qui devait jouer, voire un siège mort, et la table se bloque.
-  if (next.players.length === 0) {
+  if (next.players.length === 0 || next.phase === 'lobby') {
+    // Au salon, personne ne joue : le siège qui ouvre se tire au lancement.
     next.turnSeat = 0
   } else {
     if (next.turnSeat >= next.players.length) next.turnSeat = 0
@@ -416,8 +438,10 @@ function nextAliveSeat(state: GameState, from: number): number {
     const player = playerAtSeat(state, seat)
     if (player && isAlive(player)) return seat
   }
-  // Garde-fou : la v1 bouclait à l'infini si plus personne n'était vivant.
-  return from
+  // Garde-fou : la v1 bouclait à l'infini si plus personne n'était vivant. Le repli
+  // doit rester un siège valide — `from` peut valoir -1, et un siège négatif ne passe
+  // pas l'encodage réseau.
+  return ((from % count) + count) % count
 }
 
 /** Constate les morts, désigne un vainqueur, ou passe la main. */

@@ -13,7 +13,7 @@ import { TurnClock } from './TurnClock'
 import { seatColor } from './scene/seats'
 import { useDirector } from './scene/director'
 import { useStage } from './scene/stage'
-import { isAlive } from '@pb/engine'
+import { isStanding } from '@pb/engine'
 
 /** Ordre d'affichage des actions : les courantes d'abord, les super-pouvoirs ensuite. */
 const ACTION_ORDER: ActionType[] = [
@@ -101,7 +101,7 @@ export function GameView({ game, display }: { game: GameState; display: GameStat
               key={player.id}
               player={player}
               isTurn={player.seat === display.turnSeat && display.phase === 'playing'}
-              alive={isAlive(player)}
+              alive={isStanding(player)}
             />
           ))}
       </div>
@@ -250,7 +250,7 @@ export function GameView({ game, display }: { game: GameState; display: GameStat
           {me.isHost && <span>👑</span>}
           {me.hasSuperPower && <span title={t.table.superPower}>💥</span>}
           {me.battery && <span title={t.table.battery}>🔋</span>}
-          {!isAlive(me) && <span className="text-rose-400">☠</span>}
+          {!isStanding(me) && <span className="text-rose-400">☠</span>}
         </div>
       )}
 
