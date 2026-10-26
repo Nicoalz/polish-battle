@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
-import { AVATARS } from '@pb/engine'
+import { AVATARS, toAvatar } from '@pb/engine'
+import { Avatar } from './Avatar'
 import { useGame } from './net/store'
 import { getSavedAvatar, getSavedName } from './net/identity'
 import { useI18n } from './i18n'
@@ -23,7 +24,7 @@ export function Home() {
   const t = useI18n((state) => state.t)
 
   const [name, setName] = useState(getSavedName)
-  const [avatar, setAvatar] = useState(() => getSavedAvatar() || AVATARS[0])
+  const [avatar, setAvatar] = useState(() => toAvatar(getSavedAvatar()))
   const [code, setCode] = useState('')
   const [visibility, setVisibility] = useState<'public' | 'private'>('public')
 
@@ -65,19 +66,23 @@ export function Home() {
       <section>
         <p className={LABEL}>{t.home.avatar}</p>
         <div className="grid grid-cols-6 gap-1.5">
-          {AVATARS.map((token) => (
+          {AVATARS.map((face) => (
             <button
-              key={token}
-              onClick={() => setAvatar(token)}
-              aria-pressed={token === avatar}
-              aria-label={token}
-              className={`rounded-lg py-2 text-2xl transition ${
-                token === avatar
-                  ? 'bg-emerald-400/90 ring-2 ring-emerald-200'
-                  : 'bg-white/10 hover:bg-white/20'
+              key={face.id}
+              onClick={() => setAvatar(face.id)}
+              aria-pressed={face.id === avatar}
+              // Le portrait est décoratif : c'est la coupe qui le nomme à voix haute.
+              aria-label={t.avatars[face.id]}
+              title={t.avatars[face.id]}
+              // Rond plutôt que carré : l'anneau de sélection épouse alors le portrait
+              // au lieu de laisser quatre coins vides autour de lui.
+              className={`aspect-square overflow-hidden rounded-full transition ${
+                face.id === avatar
+                  ? 'ring-2 ring-emerald-300 brightness-110'
+                  : 'opacity-75 hover:opacity-100'
               }`}
             >
-              {token}
+              <Avatar id={face.id} className="h-full w-full" />
             </button>
           ))}
         </div>

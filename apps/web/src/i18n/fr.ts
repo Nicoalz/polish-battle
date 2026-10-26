@@ -10,7 +10,7 @@ export const fr: Dict = {
 
   home: {
     tagline: 'On choisit son coup avant de voir sa carte.',
-    avatar: 'Ton jeton',
+    avatar: 'Ton visage',
     joinByCode: 'Rejoindre par code',
     create: 'Créer un salon',
     createPublic: 'Public',
@@ -87,6 +87,21 @@ export const fr: Dict = {
     music: 'Musique',
     reducedMotion: 'Animations réduites',
     reducedMotionHint: 'Coupe les mouvements de caméra et le flottement des cartes.',
+  },
+
+  avatars: {
+    buzz: 'Coupe rasée',
+    short: 'Cheveux courts',
+    curls: 'Cheveux bouclés',
+    afro: 'Coupe afro',
+    waves: 'Cheveux ondulés',
+    long: 'Cheveux longs',
+    bob: 'Carré',
+    bun: 'Chignon',
+    ponytail: 'Queue-de-cheval',
+    locs: 'Locks',
+    bald: 'Crâne rasé et barbe',
+    scarf: 'Foulard',
   },
 
   actions: {

@@ -10,7 +10,7 @@ export const en: Dict = {
 
   home: {
     tagline: 'Commit to your move before seeing your card.',
-    avatar: 'Your token',
+    avatar: 'Your face',
     joinByCode: 'Join with a code',
     create: 'Create a room',
     createPublic: 'Public',
@@ -87,6 +87,21 @@ export const en: Dict = {
     music: 'Music',
     reducedMotion: 'Reduced motion',
     reducedMotionHint: 'Turns off camera moves and card drift.',
+  },
+
+  avatars: {
+    buzz: 'Buzz cut',
+    short: 'Short hair',
+    curls: 'Curly hair',
+    afro: 'Afro',
+    waves: 'Wavy hair',
+    long: 'Long hair',
+    bob: 'Bob',
+    bun: 'Bun',
+    ponytail: 'Ponytail',
+    locs: 'Locs',
+    bald: 'Bald with beard',
+    scarf: 'Headscarf',
   },
 
   actions: {

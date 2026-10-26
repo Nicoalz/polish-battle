@@ -16,7 +16,7 @@ pnpm install
 pnpm dev          # serveur de jeu sur 2567, client sur 5173
 ```
 
-Ouvre <http://localhost:5173>, choisis un jeton et un pseudo, puis crée un salon —
+Ouvre <http://localhost:5173>, choisis un visage et un pseudo, puis crée un salon —
 **public**, et il apparaît dans la liste de la page d'accueil, ou **privé**, et son code
 en reste l'unique porte d'entrée. Le code du salon vit
 dans l'URL : partager le lien suffit à inviter. Ferme un onglet en pleine partie et

@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react'
 import type { PlayerState } from '@pb/engine'
+import { Avatar } from './Avatar'
 import { registerPlate } from './scene/nameplates'
 import { seatColor } from './scene/seats'
 
@@ -40,11 +41,11 @@ export function Nameplate({
       // Pas de `backdrop-blur` ici : la plaque est repositionnée à chaque image, et un
       // filtre de fond coûte cher dans ces conditions. Un fond opaque suffit à la
       // détacher du tapis.
-      className={`absolute top-0 left-0 flex items-center gap-1.5 rounded-full px-3 py-1 text-[13px] font-semibold whitespace-nowrap ${
+      className={`absolute top-0 left-0 flex items-center gap-1.5 rounded-full py-1 pr-3 pl-1 text-[13px] font-semibold whitespace-nowrap ${
         alive ? 'bg-black/80' : 'bg-black/60 line-through opacity-60'
       }`}
     >
-      <span aria-hidden>{player.avatar}</span>
+      <Avatar id={player.avatar} size={20} className="shrink-0" />
       {player.name}
       {player.isHost && <span>👑</span>}
       {player.hasSuperPower && <span>💥</span>}

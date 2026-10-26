@@ -6,6 +6,7 @@ import { SettingsMenu } from './SettingsMenu'
 import { useIsCompact } from './useViewport'
 import { GameScene } from './scene/GameScene'
 import { Nameplate } from './Nameplate'
+import { Avatar } from './Avatar'
 import { History } from './History'
 import { TurnClock } from './TurnClock'
 import { seatColor } from './scene/seats'
@@ -154,7 +155,7 @@ export function GameView({ game, display }: { game: GameState; display: GameStat
             className="pointer-events-none flex items-center gap-1 rounded-full bg-black/45 px-2 py-1 text-[11px] font-semibold backdrop-blur-sm"
             style={{ color: seatColor(me.seat) }}
           >
-            <span aria-hidden>{me.avatar}</span>
+            <Avatar id={me.avatar} size={16} className="shrink-0" />
             {me.name}
             {me.isHost && <span>👑</span>}
             {me.hasSuperPower && <span>💥</span>}
@@ -226,9 +227,10 @@ export function GameView({ game, display }: { game: GameState; display: GameStat
           recouvrirait ses propres cartes. */}
       {me && !compact && (
         <div
-          className="absolute right-3 bottom-3 z-30 flex items-center gap-1.5 rounded-full bg-black/55 px-3 py-1.5 text-sm font-semibold backdrop-blur-sm"
+          className="absolute right-3 bottom-3 z-30 flex items-center gap-1.5 rounded-full bg-black/55 py-1.5 pr-3 pl-1.5 text-sm font-semibold backdrop-blur-sm"
           style={{ color: seatColor(me.seat) }}
         >
+          <Avatar id={me.avatar} size={20} className="shrink-0" />
           {me.name}
           <span className="opacity-60">{t.table.me}</span>
           {me.isHost && <span>👑</span>}

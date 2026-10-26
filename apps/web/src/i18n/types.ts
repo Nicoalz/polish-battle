@@ -1,4 +1,4 @@
-import type { ActionType, IllegalActionCode } from '@pb/engine'
+import type { ActionType, AvatarId, IllegalActionCode } from '@pb/engine'
 
 /** Motifs de refus : ceux du moteur, plus ceux propres au serveur. */
 export type RejectionCode =
@@ -101,6 +101,9 @@ export type Dict = {
   }
 
   readonly actions: Readonly<Record<ActionType, string>>
+
+  /** Ce que chaque visage donne à entendre d'abord : sa coupe. */
+  readonly avatars: Readonly<Record<AvatarId, string>>
 
   readonly events: {
     readonly gameStarted: string
