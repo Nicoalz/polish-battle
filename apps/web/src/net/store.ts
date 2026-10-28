@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import { Client, type Room } from 'colyseus.js'
-import type { Action, GameEvent, GameState, OptionKey } from '@pb/engine'
-import { fromWire, type WireGame } from '@pb/engine'
+import type { Action, Emote, GameEvent, GameState, OptionKey } from '@pb/engine'
+import { EMOTE_TTL_MS, fromWire, type WireGame } from '@pb/engine'
 import { getPlayerId, saveAvatar, saveName } from './identity'
 import { dict, type RejectionCode } from '../i18n'
 
@@ -78,6 +78,13 @@ type Store = {
   log: LogEntry[]
   /** Salons publics ouverts, rafraîchis depuis la page d'accueil. */
   openRooms: RoomSummary[]
+  /**
+   * Réactions visibles à l'instant, par joueur.
+   *
+   * Hors de l'état de jeu, et à dessein : une réaction n'est pas un coup, elle ne doit
+   * ni attendre son tour dans la file d'animations ni survivre à son instant.
+   */
+  reactions: Record<string, { emote: Emote; at: number }>
 
   connect: (
     code: string,
@@ -92,6 +99,8 @@ type Store = {
   command: (type: 'start' | 'restart' | 'skip') => void
   /** Règle une option de partie. Le serveur refusera si l'on n'est pas hôte. */
   setOption: (key: OptionKey, value: boolean) => void
+  /** Envoie une réaction à la table. Le serveur l'espace et la valide. */
+  react: (emote: Emote) => void
   kick: (playerId: string) => void
 
   /** Retire le prochain lot à jouer, ou `undefined` s'il n'y a plus rien en attente. */
@@ -138,6 +147,25 @@ export const useGame = create<Store>((set, get) => {
       set((current) => ({
         queue: [...current.queue, { version: payload.version, events: payload.events }],
       }))
+    })
+
+    joined.onMessage('emote', (payload: { playerId: string; emote: Emote }) => {
+      const at = Date.now()
+      set((current) => ({
+        reactions: { ...current.reactions, [payload.playerId]: { emote: payload.emote, at } },
+      }))
+
+      // La bulle s'efface d'elle-même. On vérifie l'horodatage avant de retirer : une
+      // réaction plus récente a pu prendre la place entre-temps, et l'effacer serait
+      // obéir à la minuterie de la précédente.
+      window.setTimeout(() => {
+        set((current) => {
+          if (current.reactions[payload.playerId]?.at !== at) return current
+          const next = { ...current.reactions }
+          delete next[payload.playerId]
+          return { reactions: next }
+        })
+      }, EMOTE_TTL_MS)
     })
 
     joined.onMessage('rejected', (payload: { code: RejectionCode }) => {
@@ -200,6 +228,7 @@ export const useGame = create<Store>((set, get) => {
     playedVersion: 0,
     log: [],
     openRooms: [],
+    reactions: {},
 
     async refreshRooms() {
       try {
@@ -251,6 +280,7 @@ export const useGame = create<Store>((set, get) => {
         version: 0,
         playedVersion: 0,
         log: [],
+        reactions: {},
       })
     },
 
@@ -264,6 +294,10 @@ export const useGame = create<Store>((set, get) => {
 
     setOption(key, value) {
       room?.send('options', { [key]: value })
+    },
+
+    react(emote) {
+      room?.send('emote', { emote })
     },
 
     kick(playerId) {

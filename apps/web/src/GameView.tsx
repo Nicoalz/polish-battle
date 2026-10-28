@@ -5,7 +5,8 @@ import { useI18n } from './i18n'
 import { SettingsMenu } from './SettingsMenu'
 import { useIsCompact } from './useViewport'
 import { GameScene } from './scene/GameScene'
-import { Nameplate } from './Nameplate'
+import { Nameplate, Reaction } from './Nameplate'
+import { EmoteBar } from './EmoteBar'
 import { Avatar } from './Avatar'
 import { GameOptions } from './GameOptions'
 import { History } from './History'
@@ -34,7 +35,7 @@ const ACTION_ORDER: ActionType[] = [
  * des coups que le serveur vient de consommer.
  */
 export function GameView({ game, display }: { game: GameState; display: GameState }) {
-  const { playerId, code, send, command, setOption, leave } = useGame()
+  const { playerId, code, send, command, setOption, leave, reactions } = useGame()
   const t = useI18n((state) => state.t)
   const [pending, setPending] = useState<ActionType | null>(null)
 
@@ -104,6 +105,7 @@ export function GameView({ game, display }: { game: GameState; display: GameStat
               player={player}
               isTurn={player.seat === display.turnSeat && display.phase === 'playing'}
               alive={isStanding(player)}
+              reaction={reactions[player.id]}
             />
           ))}
       </div>
@@ -131,6 +133,7 @@ export function GameView({ game, display }: { game: GameState; display: GameStat
             conteneur, le panneau de réglages passerait sous ses voisins. */}
         <div className="pointer-events-auto relative z-40 flex items-center gap-2 rounded-full bg-black/45 px-3 py-1.5 backdrop-blur-sm">
           <span className="font-mono text-sm tracking-widest text-slate-100">{code}</span>
+          <EmoteBar />
           <SettingsMenu />
           <button className="text-xs text-slate-400 underline" onClick={() => void leave()}>
             {t.table.leave}
@@ -143,9 +146,10 @@ export function GameView({ game, display }: { game: GameState; display: GameStat
             entièrement rendu à la barre d'action. */}
         {me && compact && (
           <div
-            className="pointer-events-none flex items-center gap-1 rounded-full bg-black/45 px-2 py-1 text-[11px] font-semibold backdrop-blur-sm"
+            className="pointer-events-none relative flex items-center gap-1 rounded-full bg-black/45 px-2 py-1 text-[11px] font-semibold backdrop-blur-sm"
             style={{ color: seatColor(me.seat) }}
           >
+            {me && reactions[me.id] && <Reaction reaction={reactions[me.id]!} />}
             <Avatar id={me.avatar} size={16} className="shrink-0" />
             {me.name}
             {me.isHost && <span>👑</span>}
@@ -234,6 +238,8 @@ export function GameView({ game, display }: { game: GameState; display: GameStat
           className="absolute right-3 bottom-3 z-30 flex items-center gap-1.5 rounded-full bg-black/55 py-1.5 pr-3 pl-1.5 text-sm font-semibold backdrop-blur-sm"
           style={{ color: seatColor(me.seat) }}
         >
+          {/* Le joueur local n'a pas de plaque : sa bulle se pose sur son encart. */}
+          {reactions[me.id] && <Reaction reaction={reactions[me.id]!} />}
           <Avatar id={me.avatar} size={20} className="shrink-0" />
           {me.name}
           <span className="opacity-60">{t.table.me}</span>

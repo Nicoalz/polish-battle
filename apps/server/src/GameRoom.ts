@@ -1,11 +1,13 @@
 import { Room, type Client, type Delayed } from '@colyseus/core'
 import {
+  EMOTE_COOLDOWN_MS,
   IllegalActionError,
   MAX_PLAYERS,
   ABSENT_TURN_LIMIT_MS,
   TURN_LIMIT_MS,
   addPlayer,
   hiddenCard,
+  isEmote,
   isOpenToNewPlayers,
   applyAction,
   createGame,
@@ -68,6 +70,8 @@ export class GameRoom extends Room<GameSchema> {
 
   private game: GameState = createGame()
   private readonly seatBySession = new Map<string, string>()
+  /** Dernière réaction de chaque joueur, pour qu'aucun ne couvre la table. */
+  private readonly lastEmote = new Map<string, number>()
   private skipTimer?: Delayed
   private announced?: string
   private listed = false
@@ -82,6 +86,7 @@ export class GameRoom extends Room<GameSchema> {
     this.onMessage('skip', (client) => this.handleHostSkip(client))
     this.onMessage('kick', (client, message) => this.handleKick(client, message))
     this.onMessage('options', (client, message) => this.handleOptions(client, message))
+    this.onMessage('emote', (client, message) => this.handleEmote(client, message))
     this.onMessage('action', (client, message) => this.handleAction(client, message))
 
     // On ne marque surtout pas le salon privé au sens de Colyseus : cela le retirerait
@@ -177,6 +182,27 @@ export class GameRoom extends Room<GameSchema> {
     if (!this.requireHost(client)) return
     if (typeof message !== 'object' || message === null) return
     this.run(client, () => ({ state: setOptions(this.game, message), events: [] }))
+  }
+
+  /**
+   * Réaction de table.
+   *
+   * Elle ne passe pas par le moteur : rien n'entre dans l'état, aucune version ne
+   * bouge, et l'historique l'ignore. Elle est simplement répétée à tout le monde, et
+   * meurt avec son instant.
+   */
+  private handleEmote(client: Client, message: unknown): void {
+    const playerId = this.playerIdOf(client)
+    if (!playerId) return
+
+    const emote = readString(message, 'emote')
+    if (!isEmote(emote)) return
+
+    const now = Date.now()
+    if (now - (this.lastEmote.get(playerId) ?? 0) < EMOTE_COOLDOWN_MS) return
+    this.lastEmote.set(playerId, now)
+
+    this.broadcast('emote', { playerId, emote })
   }
 
   private handleKick(client: Client, message: unknown): void {

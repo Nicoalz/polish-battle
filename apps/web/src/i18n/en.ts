@@ -57,6 +57,7 @@ export const en: Dict = {
     life: 'life',
     battery: 'battery',
     cursedCard: 'the cursed card: worth 0 in every role',
+    react: 'React',
     narration: {
       attack: (by, to) => (to ? `${by} attacks ${to}` : `${by} attacks…`),
       'super-attack': (by, to) => (to ? `💥 ${by} strikes ${to}` : `💥 ${by} strikes…`),

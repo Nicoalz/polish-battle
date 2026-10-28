@@ -57,6 +57,7 @@ export const fr: Dict = {
     life: 'vie',
     battery: 'batterie',
     cursedCard: 'la carte maudite : elle vaut 0 dans tous ses rôles',
+    react: 'Réagir',
     narration: {
       attack: (by, to) => (to ? `${by} attaque ${to}` : `${by} attaque…`),
       'super-attack': (by, to) =>

@@ -73,6 +73,7 @@ export type Dict = {
     readonly life: string
     readonly battery: string
     readonly cursedCard: string
+    readonly react: string
     /**
      * Le coup en cours, raconté pendant qu'il s'anime.
      *

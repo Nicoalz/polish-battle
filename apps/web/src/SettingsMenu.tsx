@@ -1,6 +1,7 @@
-import { useEffect, useRef, useState } from 'react'
+import { useRef, useState } from 'react'
 import { LOCALES, useI18n } from './i18n'
 import { useSettings } from './settings'
+import { useDismiss } from './useDismiss'
 
 /** Réglages du joueur, regroupés sous un seul bouton pour libérer la table. */
 export function SettingsMenu() {
@@ -16,21 +17,7 @@ export function SettingsMenu() {
   } = useSettings()
   const [open, setOpen] = useState(false)
   const root = useRef<HTMLDivElement>(null)
-
-  // Fermeture au clic extérieur et à Échap : un panneau qui reste ouvert masque la table.
-  useEffect(() => {
-    if (!open) return
-    const onPointer = (event: PointerEvent) => {
-      if (!root.current?.contains(event.target as Node)) setOpen(false)
-    }
-    const onKey = (event: KeyboardEvent) => event.key === 'Escape' && setOpen(false)
-    document.addEventListener('pointerdown', onPointer)
-    document.addEventListener('keydown', onKey)
-    return () => {
-      document.removeEventListener('pointerdown', onPointer)
-      document.removeEventListener('keydown', onKey)
-    }
-  }, [open])
+  useDismiss(open, root, setOpen)
 
   return (
     <div ref={root} className="relative">

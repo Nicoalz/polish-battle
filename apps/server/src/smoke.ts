@@ -14,8 +14,10 @@ import { Server } from '@colyseus/core'
 import { WebSocketTransport } from '@colyseus/ws-transport'
 import { Client, type Room } from 'colyseus.js'
 import {
+  EMOTE_COOLDOWN_MS,
   chooseAction,
   fromWire,
+  isEmote,
   isHiddenCard,
   type Action,
   type Card,
@@ -73,6 +75,8 @@ async function main(): Promise<void> {
   /** Ce qu'un joueur donné n'aurait jamais dû pouvoir lire. */
   const leaks: string[] = []
   let sawReveal = false
+  /** Réactions reçues par observateur : une réaction doit atteindre toute la table. */
+  const reactions = new Map<string, number>()
 
   for (const [index, name] of ['Alice', 'Bob', 'Chloé'].entries()) {
     const room = await (index === 0
@@ -109,6 +113,11 @@ async function main(): Promise<void> {
       }
     })
 
+    room.onMessage('emote', (payload: any) => {
+      if (!isEmote(payload?.emote)) leaks.push(`${viewer} reçoit une réaction inconnue`)
+      reactions.set(viewer, (reactions.get(viewer) ?? 0) + 1)
+    })
+
     room.onMessage('rejected', (payload: any) => rejections.push(payload.code))
     rooms.push(room)
   }
@@ -132,6 +141,31 @@ async function main(): Promise<void> {
     'personne n’est servi avant le lancement',
     lobby.players.every((p) => p.life.length === 0),
   )
+
+  console.log('\nRéactions de table')
+  const reacted = (playerId: string) => reactions.get(playerId) ?? 0
+  const pause = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
+
+  roomOf('p1').send('emote', { emote: '🔥' })
+  await waitFor(() => reacted('p0') > 0, 'réaction reçue')
+  check(
+    'une réaction atteint toute la table',
+    roomPlayerIds.every((id) => reacted(id) === 1),
+    roomPlayerIds.map((id) => `${id}=${reacted(id)}`).join(' '),
+  )
+
+  roomOf('p1').send('emote', { emote: 'rm -rf /' })
+  await pause(250)
+  check('une réaction inconnue n’est pas relayée', reacted('p0') === 1)
+
+  roomOf('p1').send('emote', { emote: '😂' })
+  await pause(250)
+  check('un joueur seul ne peut pas couvrir la table', reacted('p0') === 1)
+
+  await pause(EMOTE_COOLDOWN_MS)
+  roomOf('p1').send('emote', { emote: '😂' })
+  await waitFor(() => reacted('p0') === 2, 'seconde réaction')
+  check('… mais il réagit de nouveau passé le délai', reacted('p0') === 2)
 
   console.log('\nOptions de partie')
   /** Résumé d'une main : ses valeurs, sans ses identifiants, qui diffèrent toujours. */

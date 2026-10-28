@@ -38,3 +38,32 @@ button:disabled {
 .pb-flash {
   animation: pb-flash 420ms ease-out forwards;
 }
+
+/*
+ * Réaction de table : elle surgit, flotte, puis s'efface. Sa durée est celle qu'annonce
+ * `EMOTE_TTL_MS` — la bulle disparaît du DOM au moment même où l'animation s'achève.
+ */
+@keyframes pb-emote {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, 8px) scale(0.4);
+  }
+  14% {
+    opacity: 1;
+    transform: translate(-50%, -3px) scale(1.2);
+  }
+  26% {
+    transform: translate(-50%, 0) scale(1);
+  }
+  76% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -16px) scale(0.95);
+  }
+}
+
+.pb-emote {
+  animation: pb-emote 2400ms ease-out forwards;
+}

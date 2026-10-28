@@ -15,10 +15,12 @@ export function Nameplate({
   player,
   isTurn,
   alive,
+  reaction,
 }: {
   player: PlayerState
   isTurn: boolean
   alive: boolean
+  reaction?: { emote: string; at: number }
 }) {
   const element = useRef<HTMLDivElement>(null)
   const color = seatColor(player.seat)
@@ -45,6 +47,7 @@ export function Nameplate({
         alive ? 'bg-black/80' : 'bg-black/60 line-through opacity-60'
       }`}
     >
+      {reaction && <Reaction reaction={reaction} />}
       <Avatar id={player.avatar} size={20} className="shrink-0" />
       {player.name}
       {player.isHost && <span>👑</span>}
@@ -52,5 +55,23 @@ export function Nameplate({
       {player.battery && <span>🔋</span>}
       {!player.connected && <span className="text-amber-300">⚡︎</span>}
     </div>
+  )
+}
+
+/**
+ * Bulle de réaction, posée au-dessus d'une plaque.
+ *
+ * L'horodatage sert de clé : sans lui, réagir deux fois de suite avec le même visage
+ * ne relancerait pas l'animation, et la seconde réaction passerait inaperçue.
+ */
+export function Reaction({ reaction }: { reaction: { emote: string; at: number } }) {
+  return (
+    <span
+      key={reaction.at}
+      aria-hidden
+      className="pb-emote pointer-events-none absolute -top-8 left-1/2 text-2xl"
+    >
+      {reaction.emote}
+    </span>
   )
 }
