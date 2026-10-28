@@ -105,6 +105,7 @@ export function GameView({ game, display }: { game: GameState; display: GameStat
               player={player}
               isTurn={player.seat === display.turnSeat && display.phase === 'playing'}
               alive={isStanding(player)}
+              compact={compact}
               reaction={reactions[player.id]}
             />
           ))}

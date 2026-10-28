@@ -16,6 +16,20 @@ function clamp(value: number, min: number, max: number): number {
   return Math.min(Math.max(value, min), Math.max(min, max))
 }
 
+/**
+ * Bande haute réservée à l'en-tête.
+ *
+ * Les places sont désormais des portraits, et celle du siège le plus éloigné tombe
+ * pile sous le bandeau de tour. On l'arrête donc au-dessous plutôt que de la laisser
+ * monter jusqu'au bord. Sur écran étroit l'en-tête occupe trois lignes.
+ */
+/** Au-delà de cette distance au centre, en coordonnées normalisées, la place est hors jeu. */
+const OFFSCREEN = 1.25
+
+function topInset(width: number): number {
+  return width < 640 ? 118 : 56
+}
+
 const elements = new Map<string, HTMLElement>()
 const anchor = new THREE.Vector3()
 
@@ -37,7 +51,12 @@ export function projectPlates(
     anchor.set(...platePosition(seat, mySeat, seats.length)).project(camera)
 
     // z supérieur à 1 : le point est derrière la caméra, la plaque n'a rien à montrer.
-    const visible = anchor.z < 1
+    //
+    // Très au-delà du cadre non plus : les bornes ci-dessous ramènent les sièges
+    // latéraux dans l'écran, ce qu'on veut en jeu, mais pendant le tour d'honneur la
+    // caméra fait carrément sortir des places du champ — épinglée au coin, l'une
+    // d'elles se lirait comme un joueur assis là.
+    const visible = anchor.z < 1 && Math.abs(anchor.x) < OFFSCREEN && Math.abs(anchor.y) < OFFSCREEN
     element.style.opacity = visible ? '1' : '0'
     if (!visible) continue
 
@@ -48,7 +67,7 @@ export function projectPlates(
     const x = clamp((anchor.x * 0.5 + 0.5) * size.width, halfWidth + 6, size.width - halfWidth - 6)
     const y = clamp(
       (-anchor.y * 0.5 + 0.5) * size.height,
-      halfHeight + 6,
+      halfHeight + topInset(size.width),
       size.height - halfHeight - 6,
     )
     element.style.transform = `translate(-50%, -50%) translate(${x}px, ${y}px)`

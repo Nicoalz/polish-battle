@@ -67,10 +67,13 @@ export function seatScale(isMe: boolean): number {
 }
 
 /**
- * Point d'ancrage de la plaque de nom, côté extérieur de la table.
+ * Point d'ancrage de la place d'un joueur, côté extérieur de la table.
  *
  * Calculé ici plutôt que dans le composant : la plaque n'est plus rendue dans la scène
  * 3D mais projetée à l'écran, et les deux doivent viser exactement le même endroit.
+ *
+ * Le recul est plus franc depuis qu'un portrait occupe la place : une vignette de seize
+ * pixels tenait au ras des cartes, un visage de cinquante leur passerait dessus.
  */
 export function platePosition(
   seat: number,
@@ -80,7 +83,7 @@ export function platePosition(
   const angle = seatAngle(seat, mySeat, total)
   const [x, , z] = seatPosition(seat, mySeat, total)
   const scale = seatScale(seat === mySeat)
-  return [x + Math.sin(angle) * 1.15 * scale, 1.85 * scale, z + Math.cos(angle) * 1.15 * scale]
+  return [x + Math.sin(angle) * 1.5 * scale, 2.15 * scale, z + Math.cos(angle) * 1.5 * scale]
 }
 
 /**
