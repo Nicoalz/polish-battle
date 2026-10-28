@@ -7,6 +7,7 @@ import { PlayerSeat } from './PlayerSeat'
 import { Card3D } from './Card3D'
 import { Particles } from './Particles'
 import { Projectile } from './Projectile'
+import { Burst } from './Burst'
 import { Combination } from './Combination'
 import { Dealing } from './Dealing'
 import { CameraRig } from './CameraRig'
@@ -143,6 +144,9 @@ export function GameScene({ game, mySeat, compact, selectableIds, onSelectTarget
       <Combination mySeat={mySeat} total={total} />
       <Dealing mySeat={mySeat} total={total} />
       <Projectile />
+      {/* Les gerbes restent même sur appareil faible : ce ne sont pas des ornements,
+          elles disent qu'une carte vient d'éclater ou qu'un joueur vient de tomber. */}
+      <Burst />
       {!degraded && <Particles color={accent} />}
 
       {game.players.map((player) => (

@@ -7,6 +7,9 @@ import { layout, seatPosition } from './seats'
 
 const SHAKE_MS = 420
 
+/** Durée du tour d'honneur, fondu de sortie compris. */
+const ORBIT_S = 7
+
 /** Vecteur de travail réutilisé : allouer dans la boucle de rendu provoque des saccades. */
 const scratch = new THREE.Vector3()
 
@@ -29,7 +32,7 @@ export function CameraRig({ mySeat, total }: { mySeat: number; total: number }) 
   const fit = Math.min(1.35, Math.max(1, 1.45 / (size.width / size.height)))
 
   useFrame((state, delta) => {
-    const { focusSeat, focusPower, impactAt, impactPower } = useStage.getState()
+    const { focusSeat, focusPower, celebration, impactAt, impactPower } = useStage.getState()
     const { reducedMotion } = useSettings.getState()
 
     const { camera: base, fov } = layout()
@@ -52,6 +55,26 @@ export function CameraRig({ mySeat, total }: { mySeat: number; total: number }) 
         const pull = 0.85 * focusPower
         target.current.lerp(scratch.set(x * 0.45, 5.6 * fit, (z * 0.4 + 6.2) * fit), pull)
         look.current.lerp(scratch.set(x * 0.3, 0.4, z * 0.3), focusPower)
+      }
+
+      if (celebration) {
+        // Tour d'honneur : le seul endroit où l'on tourne autour de la table. Ailleurs
+        // le repère spatial doit rester stable, sous peine de ne plus savoir qui est
+        // assis où ; ici la partie est finie, et il n'y a plus de place à repérer.
+        //
+        // L'orbite s'ouvre et se referme toute seule, pour que la caméra retrouve sa
+        // position de repos sans que personne ait à l'y rappeler — attendre la fin
+        // d'une révérence bloquerait la file d'actions.
+        const seconds = (performance.now() - celebration.startedAt) / 1000
+        const weight = Math.min(1, seconds / 0.6) * Math.max(0, Math.min(1, (ORBIT_S - seconds) / 1.5))
+        if (weight > 0) {
+          const [x, , z] = seatPosition(celebration.seat, mySeat, total)
+          const angle = Math.atan2(x, z) + seconds * 0.45
+          const radius = 8.2 * fit
+          const around = scratch.set(Math.sin(angle) * radius, 4.8 * fit, Math.cos(angle) * radius)
+          target.current.lerp(around, weight)
+          look.current.lerp(scratch.set(x * 0.45, 0.7, z * 0.45), weight)
+        }
       }
 
       const shake = impactDecay(impactAt, impactPower, SHAKE_MS)

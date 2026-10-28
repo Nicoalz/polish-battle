@@ -25,7 +25,13 @@ const DURATIONS = {
   superWindup: 420,
   superFlight: 640,
   settle: 420,
-  victory: 700,
+  /** Le temps qu'une carte de vie finisse d'éclater. */
+  destroy: 560,
+  /** Une place qui tombe : c'est le moment le plus fort du jeu, il a droit à son temps. */
+  death: 820,
+  /** Montée de la lumière qui relève un joueur, avant que sa main réapparaisse. */
+  revive: 580,
+  victory: 1600,
   /** Temps de lecture d'une annonce qui n'a rien à montrer — un tour passé. */
   narrate: 900,
   /** Intervalle entre deux cartes servies. */
@@ -224,6 +230,18 @@ async function play(batch: Batch, mySeat: number, total: number): Promise<void> 
     await wait(ms * scale)
   }
 
+  /**
+   * Attente hors budget.
+   *
+   * Le budget existe pour ne pas prendre de retard sur une file d'actions. Ce qui suit
+   * un coup — une carte qui éclate, une place qui tombe, une victoire — n'a pas à être
+   * amputé quand il n'y a précisément rien derrière.
+   */
+  const linger = async (ms: number) => {
+    if (instant || useGame.getState().queue.length > 0) return
+    await wait(ms * scale)
+  }
+
   // Onglet masqué : on rattrape en silence, personne n'est là pour entendre.
   const sound = (name: Sfx) => {
     if (!instant) playSfx(name)
@@ -242,12 +260,16 @@ async function play(batch: Batch, mySeat: number, total: number): Promise<void> 
   const shield = events.find((event) => event.t === 'shield-set')
   const charge = events.find((event) => event.t === 'battery-set')
   const drawn = events.find((event) => event.t === 'drawn')
+  const revived = events.find((event) => event.t === 'resurrected')
   const won = events.find((event) => event.t === 'game-won')
 
   // Début de manche : on sert la table carte par carte au lieu de la faire apparaître.
   // La distribution se passe de commentaire, et ce retour anticipé est la raison pour
   // laquelle l'annonce n'est posée qu'après lui : elle resterait sinon affichée.
   if (started) {
+    // Nouvelle manche : on efface ce que la précédente a pu laisser en l'air.
+    stage.celebrate(undefined)
+    stage.setBurst(undefined)
     await dealOut(instant, scale, commit)
     return
   }
@@ -257,11 +279,15 @@ async function play(batch: Batch, mySeat: number, total: number): Promise<void> 
   const story = narrationOf(events)
   if (story) stage.narrate(story)
 
-  /** Hauteur à laquelle une carte quitte la main de son joueur. */
-  const handOf = (playerId: string): [number, number, number] => {
+  /** Point d'une place, à la hauteur voulue — absent si le joueur n'est plus à la table. */
+  const anchorOf = (playerId: string, height: number): [number, number, number] | undefined => {
     const seat = seatOf(before, playerId)
-    return seat === undefined ? DECK_POSITION : seatAnchor(seat, mySeat, total, 0.45)
+    return seat === undefined ? undefined : seatAnchor(seat, mySeat, total, height)
   }
+
+  /** Hauteur à laquelle une carte quitte la main de son joueur. */
+  const handOf = (playerId: string): [number, number, number] =>
+    anchorOf(playerId, 0.45) ?? DECK_POSITION
 
   // Léger penché vers celui qui joue, et pour tous les coups : seuls les super-pouvoirs
   // déplaçaient la caméra, si bien qu'un tour ordinaire ne bougeait rien du tout. Le
@@ -335,9 +361,6 @@ async function play(batch: Batch, mySeat: number, total: number): Promise<void> 
     sound(landed ? 'impact' : 'blocked')
     if (!instant) vibrate(landed ? 40 : 12)
     await commit()
-
-    if (events.some((event) => event.t === 'life-destroyed')) sound('destroy')
-    if (events.some((event) => event.t === 'player-died')) sound('death')
     await hold(DURATIONS.settle)
   } else if (shield || charge) {
     const target = shield ?? charge
@@ -363,10 +386,72 @@ async function play(batch: Batch, mySeat: number, total: number): Promise<void> 
     }
     await commit()
     await hold(DURATIONS.settle * 0.6)
+  } else if (revived) {
+    // Le moteur ne décrit pas les cartes rendues : il dit seulement qu'on relève
+    // quelqu'un. On montre donc l'instant plutôt que le geste — une lumière monte de sa
+    // place, et sa main réapparaît dedans. Inventer une carte en vol serait montrer
+    // quelque chose que le récit ne dit pas.
+    const seat = seatOf(before, revived.playerId)
+    const at = anchorOf(revived.playerId, 0.25)
+    if (!instant && seat !== undefined && at) {
+      stage.focus(seat, 0.8)
+      stage.setBurst({
+        at,
+        color: '#fcd34d',
+        startedAt: performance.now(),
+        count: 64,
+        kind: 'rise',
+      })
+      await hold(DURATIONS.revive)
+      stage.impact(0.45, seat)
+    }
+    await commit()
+    await hold(DURATIONS.settle)
   } else {
     await commit()
     // Un tour passé n'a rien à montrer : il ne lui reste que le temps d'être lu.
     await hold(story ? DURATIONS.narrate : DURATIONS.settle * 0.6)
+  }
+
+  // --- Les conséquences, quel que soit le chemin emprunté --------------------
+  // Une carte qui éclate, une place qui tombe, une partie gagnée : trois moments qu'on
+  // ne faisait qu'entendre passer. Ils valent pour toutes les branches, d'où leur place
+  // ici plutôt que dans celle de l'attaque.
+
+  const destroyed = events.filter((event) => event.t === 'life-destroyed')
+  if (destroyed.length > 0) {
+    sound('destroy')
+    const at = anchorOf(destroyed[0]!.playerId, 0.55)
+    // Plus il y a de cartes brisées, plus la gerbe est large : le coup se lit à sa taille.
+    if (!instant && at) {
+      stage.setBurst({
+        at,
+        color: '#ff4d6d',
+        startedAt: performance.now(),
+        count: 26 + 20 * destroyed.length,
+        kind: 'shatter',
+      })
+    }
+    await linger(DURATIONS.destroy)
+  }
+
+  const died = events.find((event) => event.t === 'player-died')
+  if (died) {
+    sound('death')
+    const seat = seatOf(before, died.playerId)
+    const at = anchorOf(died.playerId, 0.45)
+    if (!instant && seat !== undefined && at) {
+      stage.focus(seat, 0.72)
+      stage.impact(0.5, seat)
+      stage.setBurst({
+        at,
+        color: '#94a3b8',
+        startedAt: performance.now(),
+        count: 52,
+        kind: 'shatter',
+      })
+    }
+    await linger(DURATIONS.death)
   }
 
   stage.setReveal(undefined)
@@ -374,8 +459,22 @@ async function play(batch: Batch, mySeat: number, total: number): Promise<void> 
   stage.narrate(undefined)
 
   if (won) {
+    const seat = seatOf(before, won.playerId)
     stage.impact(0.8)
     sound('win')
-    await hold(DURATIONS.victory)
+    if (!instant && seat !== undefined) {
+      stage.celebrate({ seat, startedAt: performance.now() })
+      // Au-dessus du centre, et non de sa place : c'est la salle qui se vide, pas lui
+      // qui reçoit un seau. Partir de son siège envoyait la moitié des confettis
+      // derrière la caméra, où ils passaient en gros plan sans rien fêter.
+      stage.setBurst({
+        at: [0, 4.4, 0],
+        color: '#fbbf24',
+        startedAt: performance.now(),
+        count: 140,
+        kind: 'confetti',
+      })
+    }
+    await linger(DURATIONS.victory)
   }
 }

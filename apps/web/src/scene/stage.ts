@@ -134,6 +134,38 @@ export type Narration = {
   toId?: string
 }
 
+/**
+ * Gerbe de fragments partie d'un point précis.
+ *
+ * Trois moments n'avaient qu'un son et rien à voir : une carte de vie qui éclate, un
+ * joueur qui tombe, quelqu'un qu'on relève. Une seule gerbe à la fois suffit — ils ne
+ * se chevauchent jamais — et `count` en règle l'ampleur.
+ */
+export type Burst = {
+  at: [number, number, number]
+  color: string
+  startedAt: number
+  /** Nombre de fragments, donc violence de la gerbe. */
+  count: number
+  /** Éclatement vers le dehors, montée lente, ou pluie de confettis. */
+  kind: 'shatter' | 'rise' | 'confetti'
+}
+
+/**
+ * Tour d'honneur du vainqueur.
+ *
+ * C'est le seul moment où la caméra tourne autour de la table. Ailleurs le repère
+ * spatial doit rester stable, sous peine de ne plus savoir qui est assis où ; ici la
+ * partie est finie, et il n'y a plus rien à repérer.
+ *
+ * Elle n'est jamais retirée par la mise en scène : l'orbite s'amortit d'elle-même sur
+ * sa propre durée, et attendre sa fin bloquerait la file d'actions pour une révérence.
+ */
+export type Celebration = {
+  seat: number
+  startedAt: number
+}
+
 type Stage = {
   /** Coup en cours de mise en scène, tel que la bannière le raconte. */
   narration?: Narration
@@ -149,6 +181,9 @@ type Stage = {
   flight?: Flight
   /** Distribution en cours : tant qu'elle dure, les sièges ne montrent que ce qui a atterri. */
   deal?: Deal
+  /** Gerbe en cours. Elle s'éteint toute seule : personne n'a à la retirer. */
+  burst?: Burst
+  celebration?: Celebration
   /** Date du dernier impact : éclair et secousse en découlent par décroissance. */
   impactAt: number
   impactPower: number
@@ -171,6 +206,8 @@ type Stage = {
   setCombination: (combination: Combination | undefined) => void
   setFlight: (flight: Flight | undefined) => void
   setDeal: (deal: Deal | undefined) => void
+  setBurst: (burst: Burst | undefined) => void
+  celebrate: (celebration: Celebration | undefined) => void
   impact: (power: number, seat?: number) => void
   focus: (seat: number | undefined, power?: number) => void
 }
@@ -185,6 +222,8 @@ export const useStage = create<Stage>((set) => ({
   setCombination: (combination) => set({ combination }),
   setFlight: (flight) => set({ flight }),
   setDeal: (deal) => set({ deal }),
+  setBurst: (burst) => set({ burst }),
+  celebrate: (celebration) => set({ celebration }),
   impact: (power, seat) =>
     set({ impactAt: performance.now(), impactPower: power, impactSeat: seat }),
   focus: (seat, power = 1) => set({ focusSeat: seat, focusPower: power }),
