@@ -61,22 +61,22 @@ export const en: Dict = {
     narration: {
       attack: (by, to) => (to ? `${by} attacks ${to}` : `${by} attacks…`),
       'super-attack': (by, to) => (to ? `💥 ${by} strikes ${to}` : `💥 ${by} strikes…`),
-      shield: (by, to) =>
+      shield: (by, to, self) =>
         to === undefined
           ? `${by} swaps a shield…`
-          : to === by
+          : self
             ? `${by} swaps their own shield`
             : `${by} swaps ${to}'s shield`,
-      'super-shield': (by, to) =>
+      'super-shield': (by, to, self) =>
         to === undefined
           ? `💥 ${by} forges a shield…`
-          : to === by
+          : self
             ? `💥 ${by} forges their own shield`
             : `💥 ${by} forges ${to}'s shield`,
-      charge: (by, to) =>
+      charge: (by, to, self) =>
         to === undefined
           ? `${by} readies a charge…`
-          : to === by
+          : self
             ? `${by} charges up`
             : `${by} charges ${to}`,
       resurrect: (by, to) => (to ? `✨ ${by} revives ${to}` : `✨ ${by} calls the dead back…`),

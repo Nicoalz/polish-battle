@@ -80,7 +80,9 @@ export type Dict = {
      * La cible est facultative : tant que la carte n'est pas partie, on ne la nomme
      * pas. Chaque texte doit donc tenir dans les deux cas.
      */
-    readonly narration: Readonly<Record<NarrationKind, (by: string, to?: string) => string>>
+    readonly narration: Readonly<
+      Record<NarrationKind, (by: string, to: string | undefined, self: boolean) => string>
+    >
   }
 
   readonly history: {

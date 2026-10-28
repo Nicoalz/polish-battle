@@ -138,8 +138,11 @@ export type Narration = {
  * Gerbe de fragments partie d'un point précis.
  *
  * Trois moments n'avaient qu'un son et rien à voir : une carte de vie qui éclate, un
- * joueur qui tombe, quelqu'un qu'on relève. Une seule gerbe à la fois suffit — ils ne
- * se chevauchent jamais — et `count` en règle l'ampleur.
+ * joueur qui tombe, quelqu'un qu'on relève. `count` en règle l'ampleur.
+ *
+ * Une seule gerbe à la fois, délibérément : sur un coup fatal, les éclats de la carte
+ * cèdent la place à ceux de la place qui tombe, et c'est l'enchaînement qu'on veut
+ * voir — pas deux nuages superposés au même endroit.
  */
 export type Burst = {
   at: [number, number, number]

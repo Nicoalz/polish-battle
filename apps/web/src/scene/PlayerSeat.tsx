@@ -1,8 +1,8 @@
-import { useEffect, useMemo, useRef } from 'react'
+import { useMemo, useRef } from 'react'
 import { useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
 import type { PlayerState } from '@pb/engine'
-import { dealProgress, dealRank, easeOut, impactDecay, useStage } from './stage'
+import { dealProgress, dealRank, impactDecay, useStage } from './stage'
 import { useCountdown } from './useCountdown'
 import { useSettings } from '../settings'
 import { Card3D } from './Card3D'
@@ -82,19 +82,21 @@ export function PlayerSeat({
   const phase = useMemo(() => Math.random() * Math.PI * 2, [])
 
   /**
-   * Instant de la chute.
+   * Affaissement du siège, de 0 debout à 1 à terre.
    *
    * Un joueur éliminé se contentait de griser. Ses cartes s'affaissent maintenant et
    * partent de travers — on voit la place tomber au lieu de la trouver éteinte. Le
    * moment se repère sur ce que le siège affiche, et non sur le récit : il n'a pas à
    * connaître l'événement pour réagir à son propre état.
+   *
+   * Amorti vers sa cible plutôt que joué depuis un instant, parce que la chute a une
+   * réciproque : on relève les morts, dans ce jeu, et un retour sec ferait remonter la
+   * main d'un seul coup juste après la lumière censée rendre le moment solennel. Un
+   * siège déjà vide au montage part à terre sans rejouer sa chute.
    */
-  const fellAt = useRef<number | undefined>(undefined)
-  useEffect(() => {
-    fellAt.current = alive ? undefined : performance.now()
-  }, [alive])
+  const fall = useRef(alive ? 0 : 1)
 
-  useFrame((state) => {
+  useFrame((state, delta) => {
     const { impactAt, impactPower, impactSeat, deal } = useStage.getState()
     const { reducedMotion } = useSettings.getState()
     const time = state.clock.elapsedTime
@@ -109,12 +111,17 @@ export function PlayerSeat({
     // Le bouclier est servi en dernier, au tour qui suit la dernière carte de vie.
     if (shieldSlot.current) shieldSlot.current.visible = served(life.length)
 
+    // Amorti exponentiel : la chute dure le même temps quel que soit le nombre
+    // d'images par seconde. Animations réduites : on prend l'état, pas le mouvement.
+    const target = alive ? 0 : 1
+    fall.current = reducedMotion
+      ? target
+      : fall.current + (target - fall.current) * (1 - Math.exp(-delta * 5))
+
     if (cards.current) {
       const breath = reducedMotion ? 0 : Math.sin(time * 0.9 + phase)
-      const fall =
-        fellAt.current === undefined ? 0 : easeOut(Math.min(1, (now - fellAt.current) / 700))
-      cards.current.position.y = breath * 0.022 - fall * 0.34
-      cards.current.rotation.z = breath * 0.005 + fall * 0.22
+      cards.current.position.y = breath * 0.022 - fall.current * 0.34
+      cards.current.rotation.z = breath * 0.005 + fall.current * 0.22
     }
 
     if (glow.current) {

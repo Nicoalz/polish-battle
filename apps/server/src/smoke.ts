@@ -147,7 +147,9 @@ async function main(): Promise<void> {
   const pause = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 
   roomOf('p1').send('emote', { emote: '🔥' })
-  await waitFor(() => reacted('p0') > 0, 'réaction reçue')
+  // On attend les trois : n'attendre que le premier reviendrait à vérifier une course
+  // entre trois sockets indépendantes, et à la gagner par chance.
+  await waitFor(() => roomPlayerIds.every((id) => reacted(id) === 1), 'réaction reçue partout')
   check(
     'une réaction atteint toute la table',
     roomPlayerIds.every((id) => reacted(id) === 1),
@@ -325,10 +327,13 @@ async function main(): Promise<void> {
     leaks.length === 0,
     leaks.slice(0, 3).join(' ; '),
   )
+  // Le compte figure dans l'intitulé, et pas seulement en cas d'échec : la partie est
+  // tirée au sort, il arrive qu'aucune charge ne soit dépensée, et une vérification
+  // qui passe sans rien avoir observé doit se voir à la lecture.
   check(
-    'une charge dépensée arrive à découvert',
+    `une charge dépensée arrive à découvert (${spentCharges} observée(s))`,
     maskedOnSpend === 0,
-    `${spentCharges} dépensée(s), ${maskedOnSpend} encore masquée(s)`,
+    `${maskedOnSpend} encore masquée(s)`,
   )
   check('un changement de tour a été diffusé', (eventCounts.get('turn-changed') ?? 0) > 0)
   check('la victoire a été diffusée', (eventCounts.get('game-won') ?? 0) === 1)

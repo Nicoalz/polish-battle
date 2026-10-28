@@ -40,8 +40,9 @@ button:disabled {
 }
 
 /*
- * Réaction de table : elle surgit, flotte, puis s'efface. Sa durée est celle qu'annonce
- * `EMOTE_TTL_MS` — la bulle disparaît du DOM au moment même où l'animation s'achève.
+ * Réaction de table : elle surgit, flotte, puis s'efface. Sa durée est posée en ligne
+ * par le composant, d'après `EMOTE_TTL_MS` : la bulle disparaît du DOM au moment même
+ * où l'animation s'achève, et les deux ne peuvent pas se désaccorder.
  */
 @keyframes pb-emote {
   0% {

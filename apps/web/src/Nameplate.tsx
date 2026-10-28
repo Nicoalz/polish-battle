@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react'
-import type { PlayerState } from '@pb/engine'
+import { EMOTE_TTL_MS, type PlayerState } from '@pb/engine'
 import { Avatar } from './Avatar'
 import { registerPlate } from './scene/nameplates'
 import { seatColor } from './scene/seats'
@@ -69,7 +69,12 @@ export function Reaction({ reaction }: { reaction: { emote: string; at: number }
     <span
       key={reaction.at}
       aria-hidden
-      className="pb-emote pointer-events-none absolute -top-8 left-1/2 text-2xl"
+      // `no-underline` : la plaque d'un joueur éliminé est barrée, et la décoration
+      // se transmet à ses descendants — sa réaction arrivait rayée.
+      className="pb-emote pointer-events-none absolute -top-8 left-1/2 text-2xl no-underline"
+      // La durée vit dans le moteur, avec le délai d'effacement de la bulle : écrite
+      // aussi dans la feuille de style, elle s'en écarterait au premier réglage.
+      style={{ animationDuration: `${EMOTE_TTL_MS}ms` }}
     >
       {reaction.emote}
     </span>

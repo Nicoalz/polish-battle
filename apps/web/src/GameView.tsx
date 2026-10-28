@@ -149,7 +149,7 @@ export function GameView({ game, display }: { game: GameState; display: GameStat
             className="pointer-events-none relative flex items-center gap-1 rounded-full bg-black/45 px-2 py-1 text-[11px] font-semibold backdrop-blur-sm"
             style={{ color: seatColor(me.seat) }}
           >
-            {me && reactions[me.id] && <Reaction reaction={reactions[me.id]!} />}
+            {reactions[me.id] && <Reaction reaction={reactions[me.id]!} />}
             <Avatar id={me.avatar} size={16} className="shrink-0" />
             {me.name}
             {me.isHost && <span>👑</span>}

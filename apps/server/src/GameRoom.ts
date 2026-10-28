@@ -148,6 +148,7 @@ export class GameRoom extends Room<GameSchema> {
     // ferait attendre la table trente secondes à chaque tour.
     if (isOpenToNewPlayers(this.game)) {
       this.game = removePlayer(this.game, playerId)
+      this.lastEmote.delete(playerId)
       this.commit([])
     }
   }
@@ -220,6 +221,7 @@ export class GameRoom extends Room<GameSchema> {
     if (!target) return
 
     this.game = removePlayer(this.game, targetId)
+    this.lastEmote.delete(targetId)
     for (const [sessionId, playerId] of this.seatBySession) {
       if (playerId !== targetId) continue
       this.seatBySession.delete(sessionId)

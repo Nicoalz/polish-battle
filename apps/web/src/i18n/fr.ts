@@ -62,22 +62,22 @@ export const fr: Dict = {
       attack: (by, to) => (to ? `${by} attaque ${to}` : `${by} attaque…`),
       'super-attack': (by, to) =>
         to ? `💥 ${by} frappe fort sur ${to}` : `💥 ${by} frappe fort…`,
-      shield: (by, to) =>
+      shield: (by, to, self) =>
         to === undefined
           ? `${by} change un bouclier…`
-          : to === by
+          : self
             ? `${by} change son bouclier`
             : `${by} change le bouclier de ${to}`,
-      'super-shield': (by, to) =>
+      'super-shield': (by, to, self) =>
         to === undefined
           ? `💥 ${by} forge un bouclier…`
-          : to === by
+          : self
             ? `💥 ${by} se forge un bouclier`
             : `💥 ${by} forge le bouclier de ${to}`,
-      charge: (by, to) =>
+      charge: (by, to, self) =>
         to === undefined
           ? `${by} prépare une charge…`
-          : to === by
+          : self
             ? `${by} se charge`
             : `${by} charge ${to}`,
       resurrect: (by, to) => (to ? `✨ ${by} ressuscite ${to}` : `✨ ${by} rappelle les morts…`),

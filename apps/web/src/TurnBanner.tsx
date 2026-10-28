@@ -35,18 +35,25 @@ export function TurnBanner({ game, display }: { game: GameState; display: GameSt
         ? t.table.narration[narration.kind](
             who(narration.byId),
             narration.toId === undefined ? undefined : who(narration.toId),
+            // Sur les identités, jamais sur les noms : deux joueurs peuvent porter le
+            // même, et deux inconnus se liraient tous deux « ? ».
+            narration.toId === narration.byId,
           )
         : null}
 
       {!narration && display.phase === 'lobby' && t.table.waiting}
-      {!narration && display.phase === 'playing' && (
-        <>
-          {t.table.turnOf(current?.name ?? '?')}
-          {/* Le décompte suit l'état autoritaire : c'est lui que le serveur chronomètre. */}
-          <TurnClock turnSeat={game.turnSeat} playing={game.phase === 'playing'} />
-        </>
-      )}
+      {!narration && display.phase === 'playing' && t.table.turnOf(current?.name ?? '?')}
       {!narration && display.phase === 'finished' && t.table.wins(winner?.name ?? '?')}
+
+      {/*
+        Le décompte suit l'état autoritaire : c'est lui que le serveur chronomètre. Il
+        reste monté en permanence, même pendant un récit — il part de son montage, et le
+        démonter le ferait repartir de zéro à chaque animation, pour finir par annoncer
+        du temps que le serveur a déjà consommé.
+      */}
+      <span className={narration ? 'invisible' : undefined}>
+        <TurnClock turnSeat={game.turnSeat} playing={game.phase === 'playing'} />
+      </span>
     </p>
   )
 }

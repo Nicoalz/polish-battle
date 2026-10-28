@@ -118,6 +118,18 @@ export function useDirector(mySeat: number, total: number): void {
   const running = useRef(false)
   const queued = useGame((state) => state.queue.length)
 
+  // Le tour d'honneur et sa pluie de confettis survivent volontairement à la mise en
+  // scène qui les a lancés — ils s'éteignent sur leur propre durée. Ils ne doivent pas
+  // survivre à la table : sans cela, quitter une partie gagnée pour en rejoindre une
+  // autre dans les secondes qui suivent ferait tourner la caméra autour d'un inconnu.
+  useEffect(() => {
+    return () => {
+      const stage = useStage.getState()
+      stage.celebrate(undefined)
+      stage.setBurst(undefined)
+    }
+  }, [])
+
   useEffect(() => {
     if (running.current || queued === 0) return
     running.current = true
