@@ -2,11 +2,14 @@ import { OPTION_KEYS, type GameOptions as Options, type OptionKey } from '@pb/en
 import { useI18n } from './i18n'
 
 /**
- * Réglages de la partie, au salon.
+ * Réglages de la partie, hors manche.
  *
  * Tout le monde les voit — c'est la règle du jeu qu'on s'apprête à jouer, pas un secret
  * d'hôte — mais seul l'hôte peut y toucher. La liste est produite à partir du catalogue
  * du moteur : ajouter une option ne demande rien ici.
+ *
+ * Visible au salon **et** sur l'écran de fin : c'est là qu'on décide comment on rejoue,
+ * et devoir relancer pour s'apercevoir que le réglage n'a pas changé n'aurait aucun sens.
  */
 export function GameOptions({
   options,

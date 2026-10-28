@@ -184,12 +184,18 @@ export function GameView({ game, display }: { game: GameState; display: GameStat
       </header>
 
       {/* ------------------------------ options de partie ------------------------------ */}
-      {display.phase === 'lobby' && (
+      {/* Au salon et à la fin d'une manche : les deux moments où l'on choisit comment
+          on va jouer. Le moteur refuse d'y toucher en cours de partie, lui.
+
+          Les options se lisent sur l'état autoritaire et non sur l'affichage : un
+          réglage n'est pas un coup, il n'a rien à attendre derrière une animation —
+          sans quoi la case resterait décochée pendant tout le tour d'honneur. */}
+      {display.phase !== 'playing' && (
         // Calé à gauche plutôt qu'au centre : au centre, le panneau couvre la main du
         // joueur local, et c'est justement elle qu'on regarde pour juger de l'option.
         <div className="pointer-events-none absolute inset-x-0 bottom-0 z-30 flex justify-start p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:p-4">
           <GameOptions
-            options={display.options}
+            options={game.options}
             canEdit={Boolean(me?.isHost)}
             onChange={setOption}
           />
