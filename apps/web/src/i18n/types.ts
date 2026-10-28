@@ -1,4 +1,5 @@
 import type { ActionType, AvatarId, IllegalActionCode, OptionKey } from '@pb/engine'
+import type { NarrationKind } from '../scene/stage'
 
 /** Motifs de refus : ceux du moteur, plus ceux propres au serveur. */
 export type RejectionCode =
@@ -72,13 +73,21 @@ export type Dict = {
     readonly life: string
     readonly battery: string
     readonly cursedCard: string
+    /**
+     * Le coup en cours, raconté pendant qu'il s'anime.
+     *
+     * La cible est facultative : tant que la carte n'est pas partie, on ne la nomme
+     * pas. Chaque texte doit donc tenir dans les deux cas.
+     */
+    readonly narration: Readonly<Record<NarrationKind, (by: string, to?: string) => string>>
   }
 
   readonly history: {
     readonly title: string
     readonly empty: string
     readonly started: string
-    readonly skipped: string
+    /** Sans nom pour un lot qu'on ne sait pas résumer, avec nom pour un tour perdu. */
+    readonly skipped: (who?: string) => string
     readonly attack: (from: string, to: string, cards: string) => string
     readonly superAttack: (from: string, to: string, cards: string) => string
     readonly damage: (amount: number) => string
@@ -112,29 +121,6 @@ export type Dict = {
 
   /** Ce que chaque visage donne à entendre d'abord : sa coupe. */
   readonly avatars: Readonly<Record<AvatarId, string>>
-
-  readonly events: {
-    readonly gameStarted: string
-    readonly drawn: (who: string, value: number) => string
-    readonly attack: (
-      from: string,
-      to: string,
-      raw: number,
-      shield: number,
-      dealt: number,
-    ) => string
-    readonly lifeDamaged: (who: string, from: number, to: number) => string
-    readonly lifeDestroyed: (who: string) => string
-    readonly shieldSet: (by: string, who: string, value: number) => string
-    /** Sans la valeur : la charge est posée face cachée. */
-    readonly batterySet: (by: string, who: string) => string
-    readonly batteryLost: (who: string, reason: 'spent' | 'broken') => string
-    readonly superUsed: (who: string) => string
-    readonly resurrected: (by: string, who: string) => string
-    readonly playerDied: (who: string) => string
-    readonly turnChanged: (who: string) => string
-    readonly gameWon: (who: string) => string
-  }
 
   readonly rejections: Readonly<Record<RejectionCode, string>>
 }

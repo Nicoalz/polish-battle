@@ -112,6 +112,14 @@ export type GameEvent =
   | { t: 'super-used'; playerId: string; kind: 'super-attack' | 'super-shield' | 'resurrect' }
   | { t: 'resurrected'; playerId: string; byId: string }
   | { t: 'player-died'; playerId: string }
+  /**
+   * Un tour perdu sans avoir été joué : absence, chronomètre, ou décision de l'hôte.
+   *
+   * Nommer ici celui qui le perd n'est pas un luxe : le changement de tour désigne le
+   * suivant, et le client ne peut pas remonter au précédent — son affichage est en
+   * retard d'une animation, et plusieurs tours peuvent s'être enchaînés entre-temps.
+   */
+  | { t: 'turn-skipped'; playerId: string }
   | { t: 'turn-changed'; seat: number; playerId: string }
   | { t: 'game-won'; playerId: string }
 

@@ -57,13 +57,37 @@ export const en: Dict = {
     life: 'life',
     battery: 'battery',
     cursedCard: 'the cursed card: worth 0 in every role',
+    narration: {
+      attack: (by, to) => (to ? `${by} attacks ${to}` : `${by} attacks…`),
+      'super-attack': (by, to) => (to ? `💥 ${by} strikes ${to}` : `💥 ${by} strikes…`),
+      shield: (by, to) =>
+        to === undefined
+          ? `${by} swaps a shield…`
+          : to === by
+            ? `${by} swaps their own shield`
+            : `${by} swaps ${to}'s shield`,
+      'super-shield': (by, to) =>
+        to === undefined
+          ? `💥 ${by} forges a shield…`
+          : to === by
+            ? `💥 ${by} forges their own shield`
+            : `💥 ${by} forges ${to}'s shield`,
+      charge: (by, to) =>
+        to === undefined
+          ? `${by} readies a charge…`
+          : to === by
+            ? `${by} charges up`
+            : `${by} charges ${to}`,
+      resurrect: (by, to) => (to ? `✨ ${by} revives ${to}` : `✨ ${by} calls the dead back…`),
+      skip: (by) => `${by} skips their turn`,
+    },
   },
 
   history: {
     title: 'History',
     empty: 'The game has not started yet.',
     started: '— the game begins —',
-    skipped: 'turn skipped',
+    skipped: (who) => (who ? `⏭ ${who} skips their turn` : 'turn skipped'),
     attack: (from, to, cards) => `${from} attacks ${to} with ${cards}`,
     superAttack: (from, to, cards) => `💥 ${from} super-attacks ${to} with ${cards}`,
     damage: (amount) => ` — ${amount} damage`,
@@ -122,24 +146,6 @@ export const en: Dict = {
     'super-attack': '💥 Super attack on',
     'super-shield': '💥 Super shield on',
     resurrect: '✨ Resurrect',
-  },
-
-  events: {
-    gameStarted: '— the game begins —',
-    drawn: (who, value) => `${who} draws ${value}`,
-    attack: (from, to, raw, shield, dealt) =>
-      `${from} attacks ${to}: ${raw} − ${shield} shield = ${dealt}`,
-    lifeDamaged: (who, from, to) => `  ${who}: life card ${from} → ${to}`,
-    lifeDestroyed: (who) => `  ${who} loses a life card`,
-    shieldSet: (by, who, value) => `${by} puts a ${value} shield on ${who}`,
-    batterySet: (by, who) => `${by} puts a charge on ${who}`,
-    batteryLost: (who, reason) =>
-      `  ${who} loses their battery (${reason === 'spent' ? 'spent' : 'broken'})`,
-    superUsed: (who) => `💥 ${who} uses their super power`,
-    resurrected: (by, who) => `✨ ${by} resurrects ${who}`,
-    playerDied: (who) => `☠ ${who} is eliminated`,
-    turnChanged: (who) => `→ ${who} to play`,
-    gameWon: (who) => `🏆 ${who} wins the game`,
   },
 
   rejections: {

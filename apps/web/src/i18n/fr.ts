@@ -57,13 +57,38 @@ export const fr: Dict = {
     life: 'vie',
     battery: 'batterie',
     cursedCard: 'la carte maudite : elle vaut 0 dans tous ses rôles',
+    narration: {
+      attack: (by, to) => (to ? `${by} attaque ${to}` : `${by} attaque…`),
+      'super-attack': (by, to) =>
+        to ? `💥 ${by} frappe fort sur ${to}` : `💥 ${by} frappe fort…`,
+      shield: (by, to) =>
+        to === undefined
+          ? `${by} change un bouclier…`
+          : to === by
+            ? `${by} change son bouclier`
+            : `${by} change le bouclier de ${to}`,
+      'super-shield': (by, to) =>
+        to === undefined
+          ? `💥 ${by} forge un bouclier…`
+          : to === by
+            ? `💥 ${by} se forge un bouclier`
+            : `💥 ${by} forge le bouclier de ${to}`,
+      charge: (by, to) =>
+        to === undefined
+          ? `${by} prépare une charge…`
+          : to === by
+            ? `${by} se charge`
+            : `${by} charge ${to}`,
+      resurrect: (by, to) => (to ? `✨ ${by} ressuscite ${to}` : `✨ ${by} rappelle les morts…`),
+      skip: (by) => `${by} passe son tour`,
+    },
   },
 
   history: {
     title: 'Historique',
     empty: 'La partie n’a pas encore commencé.',
     started: '— la partie commence —',
-    skipped: 'tour passé',
+    skipped: (who) => (who ? `⏭ ${who} passe son tour` : 'tour passé'),
     attack: (from, to, cards) => `${from} attaque ${to} avec ${cards}`,
     superAttack: (from, to, cards) => `💥 ${from} super-attaque ${to} avec ${cards}`,
     damage: (amount) => ` — ${amount} de dégâts`,
@@ -122,24 +147,6 @@ export const fr: Dict = {
     'super-attack': '💥 Super-attaque sur',
     'super-shield': '💥 Super-bouclier sur',
     resurrect: '✨ Ressusciter',
-  },
-
-  events: {
-    gameStarted: '— la partie commence —',
-    drawn: (who, value) => `${who} pioche ${value}`,
-    attack: (from, to, raw, shield, dealt) =>
-      `${from} attaque ${to} : ${raw} − ${shield} de bouclier = ${dealt}`,
-    lifeDamaged: (who, from, to) => `  ${who} : carte de vie ${from} → ${to}`,
-    lifeDestroyed: (who) => `  ${who} perd une carte de vie`,
-    shieldSet: (by, who, value) => `${by} pose un bouclier ${value} sur ${who}`,
-    batterySet: (by, who) => `${by} pose une charge sur ${who}`,
-    batteryLost: (who, reason) =>
-      `  ${who} perd sa batterie (${reason === 'spent' ? 'dépensée' : 'cassée'})`,
-    superUsed: (who) => `💥 ${who} utilise son super-pouvoir`,
-    resurrected: (by, who) => `✨ ${by} ressuscite ${who}`,
-    playerDied: (who) => `☠ ${who} est éliminé`,
-    turnChanged: (who) => `→ au tour de ${who}`,
-    gameWon: (who) => `🏆 ${who} gagne la partie`,
   },
 
   rejections: {

@@ -596,6 +596,12 @@ export function skipTurn(state: GameState): ApplyResult {
 
   const next = structuredClone(state)
   const events: GameEvent[] = []
+
+  // Le tour est perdu par quelqu'un, et ce quelqu'un a un nom : sans cet événement,
+  // la table voit la main passer sans jamais savoir à qui elle a échappé.
+  const losing = playerAtSeat(next, next.turnSeat)
+  if (losing) events.push({ t: 'turn-skipped', playerId: losing.id })
+
   finalizeTurn(next, new Set(alivePlayers(next).map((p) => p.id)), events)
   return { state: next, events }
 }

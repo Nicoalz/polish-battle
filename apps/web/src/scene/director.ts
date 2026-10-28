@@ -1,9 +1,9 @@
 import { useEffect, useRef } from 'react'
-import type { Card, GameState } from '@pb/engine'
+import type { Card, GameEvent, GameState } from '@pb/engine'
 import { useGame, type Batch } from '../net/store'
 import { useSettings } from '../settings'
 import { playSfx, vibrate, type Sfx } from '../audio/synth'
-import { DEAL_PENDING, dealCount, useStage, type Deal } from './stage'
+import { DEAL_PENDING, dealCount, useStage, type Deal, type Narration } from './stage'
 import { DECK_POSITION, DRAWN_CARD_POSITION, seatAnchor } from './seats'
 
 /**
@@ -26,6 +26,8 @@ const DURATIONS = {
   superFlight: 640,
   settle: 420,
   victory: 700,
+  /** Temps de lecture d'une annonce qui n'a rien à montrer — un tour passé. */
+  narrate: 900,
   /** Intervalle entre deux cartes servies. */
   dealCard: 85,
   /** Durée du vol d'une carte distribuée. */
@@ -62,6 +64,40 @@ function seatOf(state: GameState | undefined, playerId: string): number | undefi
 }
 
 /**
+ * Qui joue, et quoi.
+ *
+ * Déduit du récit plutôt que de l'état : le lot d'événements dit déjà tout, et le lire
+ * ici évite de comparer deux états pour retrouver une information qu'on a sous la main.
+ *
+ * La cible manque volontairement pour les coups qui s'envolent — elle sera ajoutée au
+ * départ de la carte. Une résurrection, elle, vise quelqu'un de visiblement mort : il
+ * n'y a là aucun suspense à préserver.
+ */
+function narrationOf(events: GameEvent[]): Narration | undefined {
+  const attack = events.find((event) => event.t === 'attack-resolved')
+  if (attack) {
+    return { kind: attack.kind === 'super' ? 'super-attack' : 'attack', byId: attack.fromId }
+  }
+
+  const shield = events.find((event) => event.t === 'shield-set')
+  if (shield) {
+    return { kind: shield.kind === 'super' ? 'super-shield' : 'shield', byId: shield.byId }
+  }
+
+  const charge = events.find((event) => event.t === 'battery-set')
+  if (charge) return { kind: 'charge', byId: charge.byId }
+
+  const revived = events.find((event) => event.t === 'resurrected')
+  if (revived) return { kind: 'resurrect', byId: revived.byId, toId: revived.playerId }
+
+  // Reste le tour perdu. Il se lit sur son propre événement : reconstituer le joueur
+  // précédent à partir de l'affichage donnait le mauvais nom dès que deux tours
+  // s'enchaînaient plus vite que la mise en scène ne les raconte.
+  const skipped = events.find((event) => event.t === 'turn-skipped')
+  return skipped ? { kind: 'skip', byId: skipped.playerId } : undefined
+}
+
+/**
  * Carte résultante d'une addition.
  *
  * Son rang ne descend jamais à zéro : c'est ce qui marque la carte maudite, et un total
@@ -92,6 +128,7 @@ export function useDirector(mySeat: number, total: number): void {
       } finally {
         // Quoi qu'il arrive — exception, minuterie bridée, onglet masqué — l'affichage
         // rattrape l'état autoritaire et la main est rendue.
+        stage.narrate(undefined)
         stage.focus(undefined)
         stage.setFlight(undefined)
         stage.setReveal(undefined)
@@ -208,10 +245,17 @@ async function play(batch: Batch, mySeat: number, total: number): Promise<void> 
   const won = events.find((event) => event.t === 'game-won')
 
   // Début de manche : on sert la table carte par carte au lieu de la faire apparaître.
+  // La distribution se passe de commentaire, et ce retour anticipé est la raison pour
+  // laquelle l'annonce n'est posée qu'après lui : elle resterait sinon affichée.
   if (started) {
     await dealOut(instant, scale, commit)
     return
   }
+
+  // Le coup s'annonce dès le début de sa mise en scène : sans cela la bannière nomme
+  // encore le joueur précédent pendant que le suivant peut déjà agir.
+  const story = narrationOf(events)
+  if (story) stage.narrate(story)
 
   if (superUsed) {
     sound('super')
@@ -253,6 +297,10 @@ async function play(batch: Batch, mySeat: number, total: number): Promise<void> 
       stage.setCombination(undefined)
     }
 
+    // La carte part : on peut enfin dire sur qui. Pas avant — ni pendant l'addition,
+    // qui est justement le moment où la table retient son souffle.
+    if (story) stage.narrate({ ...story, toId: attack.toId })
+
     if (toSeat !== undefined) {
       stage.setReveal(undefined)
       stage.setFlight({
@@ -281,6 +329,7 @@ async function play(batch: Batch, mySeat: number, total: number): Promise<void> 
   } else if (shield || charge) {
     const target = shield ?? charge
     const toSeat = target ? seatOf(before, target.playerId) : undefined
+    if (story && target) stage.narrate({ ...story, toId: target.playerId })
     if (toSeat !== undefined && target) {
       stage.setReveal(undefined)
       stage.setFlight({
@@ -301,11 +350,13 @@ async function play(batch: Batch, mySeat: number, total: number): Promise<void> 
     await hold(DURATIONS.settle * 0.6)
   } else {
     await commit()
-    await hold(DURATIONS.settle * 0.6)
+    // Un tour passé n'a rien à montrer : il ne lui reste que le temps d'être lu.
+    await hold(story ? DURATIONS.narrate : DURATIONS.settle * 0.6)
   }
 
   stage.setReveal(undefined)
   stage.focus(undefined)
+  stage.narrate(undefined)
 
   if (won) {
     stage.impact(0.8)

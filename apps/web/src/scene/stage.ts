@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import type { Card } from '@pb/engine'
+import type { ActionType, Card } from '@pb/engine'
 
 /**
  * État visuel transitoire de la scène : tout ce qui n'appartient pas à la partie mais
@@ -100,7 +100,30 @@ export function dealProgress(deal: Deal, rank: number, now: number): number {
   return (now - deal.startedAt - rank * deal.perCard) / deal.flight
 }
 
+/** Coups qu'une bannière peut avoir à raconter : ceux du moteur, plus le tour passé. */
+export type NarrationKind = ActionType | 'skip'
+
+/**
+ * Ce qui se joue à l'instant, en une phrase.
+ *
+ * La bannière annonçait « au tour de X » d'après l'affichage, donc en retard d'une
+ * animation : elle nommait encore le joueur précédent alors que le suivant pouvait déjà
+ * agir. Raconter le coup en cours lève la contradiction — c'est vrai pendant toute la
+ * mise en scène, et c'est justement ce qu'on cherchait à l'écran.
+ *
+ * La cible reste absente tant que la carte n'est pas partie vers elle : on sait qu'un
+ * coup se prépare, pas encore sur qui il tombe. C'est le seul suspense du jeu, et
+ * l'annoncer d'avance le gâcherait.
+ */
+export type Narration = {
+  kind: NarrationKind
+  byId: string
+  toId?: string
+}
+
 type Stage = {
+  /** Coup en cours de mise en scène, tel que la bannière le raconte. */
+  narration?: Narration
   /**
    * Carte dévoilée au centre de la table.
    *
@@ -121,6 +144,7 @@ type Stage = {
   /** Siège sur lequel la caméra se penche pendant une cinématique. */
   focusSeat?: number
 
+  narrate: (narration: Narration | undefined) => void
   setReveal: (card: Card | undefined) => void
   setCombination: (combination: Combination | undefined) => void
   setFlight: (flight: Flight | undefined) => void
@@ -133,6 +157,7 @@ export const useStage = create<Stage>((set) => ({
   impactAt: -Infinity,
   impactPower: 0,
 
+  narrate: (narration) => set({ narration }),
   setReveal: (card) => set({ reveal: card }),
   setCombination: (combination) => set({ combination }),
   setFlight: (flight) => set({ flight }),

@@ -23,6 +23,7 @@ export function describeAction(
   const revived = events.find((event) => event.t === 'resurrected')
   const won = events.find((event) => event.t === 'game-won')
   const deaths = events.filter((event) => event.t === 'player-died')
+  const skipped = events.find((event) => event.t === 'turn-skipped')
 
   let line: string
 
@@ -48,7 +49,7 @@ export function describeAction(
   } else if (events.some((event) => event.t === 'game-started')) {
     return h.started
   } else {
-    return h.skipped
+    return h.skipped(skipped ? who(skipped.playerId) : undefined)
   }
 
   for (const death of deaths) line += h.eliminated(who(death.playerId))

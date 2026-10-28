@@ -310,6 +310,23 @@ describe('le passage de tour forcé (joueur absent, pouvoir d’hôte)', () => {
     const { state: next } = skipTurn(duel())
     expect(next.turnSeat).toBe(1)
   })
+
+  it('nomme celui qui perd son tour, pas celui qui en hérite', () => {
+    const { events } = skipTurn(duel())
+
+    // Deux joueurs distincts : le client doit pouvoir annoncer le bon sans avoir à
+    // remonter dans un état d'affichage qui a toujours un tour de retard.
+    expect(events).toContainEqual({ t: 'turn-skipped', playerId: 'a' })
+    expect(events.some((e) => e.t === 'turn-changed' && e.playerId === 'b')).toBe(true)
+  })
+
+  it('ne raconte rien hors partie', () => {
+    const lobby = addPlayer(addPlayer(createGame(1), { id: 'a', name: 'a' }), {
+      id: 'b',
+      name: 'b',
+    })
+    expect(skipTurn(lobby).events).toEqual([])
+  })
 })
 
 describe('l’immutabilité du moteur', () => {

@@ -9,7 +9,7 @@ import { Nameplate } from './Nameplate'
 import { Avatar } from './Avatar'
 import { GameOptions } from './GameOptions'
 import { History } from './History'
-import { TurnClock } from './TurnClock'
+import { TurnBanner } from './TurnBanner'
 import { seatColor } from './scene/seats'
 import { useDirector } from './scene/director'
 import { useStage } from './scene/stage'
@@ -40,7 +40,10 @@ export function GameView({ game, display }: { game: GameState; display: GameStat
 
   const me = display.players.find((player) => player.id === playerId)
   const myTurn = game.players.find((player) => player.seat === game.turnSeat)?.id === playerId
-  const { impactAt, impactPower } = useStage()
+  // Par sélecteurs : la mise en scène touche à cet état plusieurs fois par action, et
+  // seul l'éclair d'impact a une raison de redessiner la table avec elle.
+  const impactAt = useStage((state) => state.impactAt)
+  const impactPower = useStage((state) => state.impactPower)
   const compact = useIsCompact()
 
   // Les animations se jouent à partir de l'état d'affichage, donc depuis les places
@@ -68,7 +71,6 @@ export function GameView({ game, display }: { game: GameState; display: GameStat
     )
   }, [actions, pending])
 
-  const current = display.players.find((player) => player.seat === display.turnSeat)
   const winner = display.players.find((player) => player.id === display.winnerId)
   const accent = seatColor(display.turnSeat)
 
@@ -135,19 +137,7 @@ export function GameView({ game, display }: { game: GameState; display: GameStat
           </button>
         </div>
 
-        {/* Sur écran étroit l'indicateur de tour passe sur sa propre ligne plutôt que
-            de comprimer les deux autres blocs. */}
-        <p className="pointer-events-none order-last mx-auto w-full rounded-full bg-black/45 px-4 py-1.5 text-center text-xs backdrop-blur-sm sm:order-none sm:w-auto sm:text-sm">
-          {display.phase === 'lobby' && t.table.waiting}
-          {display.phase === 'playing' && (
-            <>
-              {t.table.turnOf(current?.name ?? '?')}
-              {/* Le décompte suit l'état autoritaire : c'est lui que le serveur chronomètre. */}
-              <TurnClock turnSeat={game.turnSeat} playing={game.phase === 'playing'} />
-            </>
-          )}
-          {display.phase === 'finished' && t.table.wins(winner?.name ?? '?')}
-        </p>
+        <TurnBanner game={game} display={display} />
 
         {/* Sur mobile l'identité monte dans l'en-tête : le bas de l'écran est
             entièrement rendu à la barre d'action. */}
