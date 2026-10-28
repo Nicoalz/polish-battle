@@ -26,6 +26,19 @@ export type Combination = {
   duration: number
 }
 
+/**
+ * Carte dévoilée, et le siège d'où elle s'élève.
+ *
+ * Elle montait jusqu'ici du paquet, au centre, quel que soit son auteur : la table
+ * voyait donc une carte apparaître sans savoir de qui elle venait. Elle part désormais
+ * de la place de celui qui joue — l'origine dit qui agit, et l'arrivée au centre laisse
+ * entière la seule question qui compte encore : sur qui.
+ */
+export type Reveal = {
+  card: Card
+  from: [number, number, number]
+}
+
 export type Flight = {
   cards: Card[]
   from: [number, number, number]
@@ -131,7 +144,7 @@ type Stage = {
    * temps d'être vue. Elle n'appartient donc à aucun joueur et ne vit que dans la mise
    * en scène.
    */
-  reveal?: Card
+  reveal?: Reveal
   combination?: Combination
   flight?: Flight
   /** Distribution en cours : tant qu'elle dure, les sièges ne montrent que ce qui a atterri. */
@@ -143,28 +156,38 @@ type Stage = {
   impactSeat?: number
   /** Siège sur lequel la caméra se penche pendant une cinématique. */
   focusSeat?: number
+  /**
+   * Force du penché, de 0 à 1.
+   *
+   * Un super-pouvoir mérite la plongée entière ; un coup ordinaire se contente d'une
+   * inclinaison. Sans ce réglage, pencher la caméra à chaque tour donnerait le mal de
+   * mer, et ne pas la pencher du tout laisserait la question « qui joue ? » sans
+   * réponse ailleurs que dans le texte.
+   */
+  focusPower: number
 
   narrate: (narration: Narration | undefined) => void
-  setReveal: (card: Card | undefined) => void
+  setReveal: (reveal: Reveal | undefined) => void
   setCombination: (combination: Combination | undefined) => void
   setFlight: (flight: Flight | undefined) => void
   setDeal: (deal: Deal | undefined) => void
   impact: (power: number, seat?: number) => void
-  focus: (seat: number | undefined) => void
+  focus: (seat: number | undefined, power?: number) => void
 }
 
 export const useStage = create<Stage>((set) => ({
   impactAt: -Infinity,
   impactPower: 0,
+  focusPower: 1,
 
   narrate: (narration) => set({ narration }),
-  setReveal: (card) => set({ reveal: card }),
+  setReveal: (reveal) => set({ reveal }),
   setCombination: (combination) => set({ combination }),
   setFlight: (flight) => set({ flight }),
   setDeal: (deal) => set({ deal }),
   impact: (power, seat) =>
     set({ impactAt: performance.now(), impactPower: power, impactSeat: seat }),
-  focus: (seat) => set({ focusSeat: seat }),
+  focus: (seat, power = 1) => set({ focusSeat: seat, focusPower: power }),
 }))
 
 /** Décroissance d'un impact, de 1 juste après le choc à 0 au bout de `ms`. */

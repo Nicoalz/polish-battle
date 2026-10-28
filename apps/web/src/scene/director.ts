@@ -257,6 +257,19 @@ async function play(batch: Batch, mySeat: number, total: number): Promise<void> 
   const story = narrationOf(events)
   if (story) stage.narrate(story)
 
+  /** Hauteur à laquelle une carte quitte la main de son joueur. */
+  const handOf = (playerId: string): [number, number, number] => {
+    const seat = seatOf(before, playerId)
+    return seat === undefined ? DECK_POSITION : seatAnchor(seat, mySeat, total, 0.45)
+  }
+
+  // Léger penché vers celui qui joue, et pour tous les coups : seuls les super-pouvoirs
+  // déplaçaient la caméra, si bien qu'un tour ordinaire ne bougeait rien du tout. Le
+  // super-pouvoir garde sa plongée entière, juste après — il ne s'agit pas de mettre
+  // tous les coups sur le même plan, mais de ne plus laisser les plus courants muets.
+  const actorSeat = story ? seatOf(before, story.byId) : undefined
+  if (!quick && actorSeat !== undefined) stage.focus(actorSeat, 0.38)
+
   if (superUsed) {
     sound('super')
     if (!quick) {
@@ -268,7 +281,7 @@ async function play(batch: Batch, mySeat: number, total: number): Promise<void> 
   // Le coup était engagé à l'aveugle : c'est seulement maintenant que la carte se
   // montre, et toute la table la découvre en même temps que son auteur.
   if (drawn) {
-    stage.setReveal(drawn.card)
+    stage.setReveal({ card: drawn.card, from: handOf(drawn.playerId) })
     sound('draw')
     await hold(DURATIONS.reveal)
   }
@@ -334,9 +347,11 @@ async function play(batch: Batch, mySeat: number, total: number): Promise<void> 
       stage.setReveal(undefined)
       stage.setFlight({
         cards: [target.card],
-        // Un bouclier part du centre, où il vient d'être montré ; une charge sort
-        // directement du paquet, sans jamais s'être dévoilée.
-        from: shield ? DRAWN_CARD_POSITION : DECK_POSITION,
+        // Un bouclier part du centre, où il vient d'être montré ; une charge part de la
+        // main de son auteur, sans jamais s'être dévoilée. Dans les deux cas on sait
+        // d'où vient le coup — c'est le dos de la carte qui dit qu'on en ignore la
+        // valeur, pas son point de départ.
+        from: shield ? DRAWN_CARD_POSITION : handOf(target.byId),
         to: seatAnchor(toSeat, mySeat, total, 0.7),
         kind: 'place',
         startedAt: performance.now(),

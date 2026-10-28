@@ -51,8 +51,8 @@ function RevealedCard() {
   if (!reveal || combining) return null
 
   return (
-    <DrawnCardEntry key={reveal.id}>
-      <Card3D card={reveal} role="drawn" scale={1.5} />
+    <DrawnCardEntry key={reveal.card.id} from={reveal.from}>
+      <Card3D card={reveal.card} role="drawn" scale={1.5} />
     </DrawnCardEntry>
   )
 }

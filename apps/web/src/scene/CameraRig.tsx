@@ -13,10 +13,10 @@ const scratch = new THREE.Vector3()
 /**
  * Caméra vivante.
  *
- * Au repos elle respire à peine. Elle se penche vers le joueur qui déclenche un
- * super-pouvoir, et encaisse une secousse à chaque impact. Tout passe par un
- * amortissement vers une cible : aucun mouvement n'est brusque, et couper les animations
- * revient simplement à viser la position de repos.
+ * Au repos elle dérive à peine. Elle se penche vers celui qui joue — franchement sur un
+ * super-pouvoir, à peine sur un coup ordinaire — et encaisse une secousse à chaque
+ * impact. Tout passe par un amortissement vers une cible : aucun mouvement n'est
+ * brusque, et couper les animations revient simplement à viser la position de repos.
  */
 export function CameraRig({ mySeat, total }: { mySeat: number; total: number }) {
   const camera = useThree((state) => state.camera)
@@ -29,7 +29,7 @@ export function CameraRig({ mySeat, total }: { mySeat: number; total: number }) 
   const fit = Math.min(1.35, Math.max(1, 1.45 / (size.width / size.height)))
 
   useFrame((state, delta) => {
-    const { focusSeat, impactAt, impactPower } = useStage.getState()
+    const { focusSeat, focusPower, impactAt, impactPower } = useStage.getState()
     const { reducedMotion } = useSettings.getState()
 
     const { camera: base, fov } = layout()
@@ -49,8 +49,9 @@ export function CameraRig({ mySeat, total }: { mySeat: number; total: number }) 
         const [x, , z] = seatPosition(focusSeat, mySeat, total)
         // On se rapproche du siège visé sans jamais lui tourner autour : le repère
         // spatial de la table doit rester stable.
-        target.current.lerp(scratch.set(x * 0.45, 5.6 * fit, (z * 0.4 + 6.2) * fit), 0.85)
-        look.current.set(x * 0.3, 0.4, z * 0.3)
+        const pull = 0.85 * focusPower
+        target.current.lerp(scratch.set(x * 0.45, 5.6 * fit, (z * 0.4 + 6.2) * fit), pull)
+        look.current.lerp(scratch.set(x * 0.3, 0.4, z * 0.3), focusPower)
       }
 
       const shake = impactDecay(impactAt, impactPower, SHAKE_MS)
@@ -58,10 +59,17 @@ export function CameraRig({ mySeat, total }: { mySeat: number; total: number }) 
         const time = state.clock.elapsedTime * 60
         target.current.x += Math.sin(time * 1.7) * shake * 0.22
         target.current.y += Math.sin(time * 2.3) * shake * 0.16
+        // Et l'on se jette brièvement en avant : la secousse seule tremble, elle ne
+        // frappe pas.
+        target.current.multiplyScalar(1 - shake * 0.035)
       }
 
-      // Respiration permanente : sans elle, la scène semble figée entre deux coups.
-      target.current.y += Math.sin(state.clock.elapsedTime * 0.5) * 0.06
+      // Respiration permanente : sans elle, la scène semble figée entre deux coups. Le
+      // balancement est volontairement plus lent que la respiration — superposés, deux
+      // mouvements de même période se liraient comme un seul tremblement.
+      const time = state.clock.elapsedTime
+      target.current.y += Math.sin(time * 0.5) * 0.06
+      target.current.x += Math.sin(time * 0.21) * 0.18
     }
 
     const ease = 1 - Math.exp(-delta * 4)

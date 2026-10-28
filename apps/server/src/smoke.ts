@@ -68,7 +68,8 @@ async function main(): Promise<void> {
   const eventCounts = new Map<string, number>()
   const rejections: string[] = []
   let sawBattery = false
-  let revealedOnAttack = false
+  let spentCharges = 0
+  let maskedOnSpend = 0
   /** Ce qu'un joueur donné n'aurait jamais dû pouvoir lire. */
   const leaks: string[] = []
   let sawReveal = false
@@ -97,8 +98,13 @@ async function main(): Promise<void> {
           leaks.push(`${viewer} voit la charge posée sur ${event.playerId}`)
         }
 
+        // Une charge dépensée cesse d'être secrète : elle arrive à découvert dans
+        // l'attaque. On le vérifie sur le masquage, et non sur sa valeur — la carte
+        // maudite vaut zéro de plein droit, et l'exiger non nulle faisait échouer la
+        // vérification une partie sur trois, au hasard de la graine.
         if (event.t === 'attack-resolved' && event.cards.length > 1) {
-          if (event.cards[1].value > 0) revealedOnAttack = true
+          spentCharges++
+          if (isHiddenCard(event.cards[1])) maskedOnSpend++
         }
       }
     })
@@ -285,7 +291,11 @@ async function main(): Promise<void> {
     leaks.length === 0,
     leaks.slice(0, 3).join(' ; '),
   )
-  check('une charge dépensée se révèle dans l’attaque', revealedOnAttack)
+  check(
+    'une charge dépensée arrive à découvert',
+    maskedOnSpend === 0,
+    `${spentCharges} dépensée(s), ${maskedOnSpend} encore masquée(s)`,
+  )
   check('un changement de tour a été diffusé', (eventCounts.get('turn-changed') ?? 0) > 0)
   check('la victoire a été diffusée', (eventCounts.get('game-won') ?? 0) === 1)
 
